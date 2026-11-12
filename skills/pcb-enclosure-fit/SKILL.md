@@ -108,10 +108,9 @@ mil×0.0254=mm；板框在 layer 11（含缺口圆弧），焊盘 PAD 的 hole �
 10. **元件包络（courtyard × 高度）报的碰壳，用 EDA 自己导出的整板 STEP 实体复核。** 情形：PCB 入壳检查用包络盒，报连接器之类碰侧壁。规则：先用 `scripts/step_export_check.py <板>.kicad_pcb <输出>.step [透传参数，不含 -o]` 导整板（内部调 `kicad-cli pcb export step`；kicad-cli 缺模型只打「Could not add 3D model for J2.」告警、退出码仍 0，脚本数出来，退出码 1 并列位号；2 = 导出失败或没出文件），列出的位号 STEP 里没有实体，碰壳结论记「未验证」，补模型重导前不许写「不碰」（封装没写 model、模型设了隐藏的件 kicad-cli 不报，也要自己核）；再按模型名找那颗件的实体量 bbox，换到装配坐标再比；自己按转角手算时两种转向都算一遍，以导出结果为准。证据：原力手环 C06 八路版（10-25）USB 座 TYPE-C-31-M-14 包络报碰壳 6.33 mm³；导出 STEP 实体最外 X 21.43，侧壁内面 21.8，余 0.37，是假冲突（八路版 README B 节）；手算的两种转向结果相反，所以以导出结果为准。置信：低（单次）。
 11. **件高用厂家图纸最大值，不用 EDA 3D 模型。** 情形：电池、盖板压在元件上方，余量按件高算。规则：入壳检查的件高先取厂家封装图的 max，没有图纸才退回模型实测并标出来。证据：C07（10-24，`PROGRESS-20261024.md` I 节）ADS1298 nFBGA 的 KiCad 模型高 1.10，TI ZXG0064A 图纸「1.45 mm max height」，降板加挪高件的组合方案因此不成立；C06 八路版按 1.10 推演的 S1–S4 四组改法也随之作废。置信：低（单次）。
 
-- **高度公差链里易漏项（翘曲/落座/电池单边公差）、板下障碍用高柱求交、板下浮动件（表带/电极）要限位并做上移正反对照、大件位置先全扫、USB 开口按插头与射频座按插合高**：见 `references/height-stack.md`（原力手环 C07，2026-10-25）。
+- **高度公差链里易漏项（翘曲/落座/电池单边公差）、板下障碍用高柱求交（`fitprobe.under_board_top_z`）、板下浮动件（表带/电极）要限位并做上移正反对照（`fitprobe.floating_stop_check`）、大件位置先全扫、USB 开口按插头与射频座按插合高**：见 `references/height-stack.md`（原力手环 C07，2026-10-25）。
 
-模板：`~/go/202608/赛博 AI/amac1984-taishan/check_fit.py`（静态两两求交）、`check_insert.py`（滑入 + 残壁）、
-`check_holes.py`（孔位两法互证）、`make_coupon.py`（试片）。
+通用探针已合并进 `ai-cad-pipeline/scripts/fitprobe.py`（自检 `test_fitprobe.py`）：`assert_healthy`（体积区间+单体防残骸假通过）、`clash`（静态两两求交）、`slide_path`（逐站滑入求交）、`plug_sweep`（插头胶壳扫掠+开孔余量）、`cylinder_axes` / `match_holes`（OCC 圆柱轴心与 EDA 孔位互证）、`under_board_top_z`（板下高柱求交）、`floating_stop_check`（浮动件限位正反对照）。历史样板：`~/go/202608/赛博 AI/amac1984-taishan/check_*.py`。
 
 build123d 0.11 坑：`Pos * Compound` 包装体动而 `.children` 不动——对
 Compound 逐叶变换再求交，否则探针报假干涉；圆角矩形轮廓禁 3D 倒角
@@ -164,12 +163,16 @@ build123d 0.13 坑（原力手环 P45，2026-10-27，同一天犯三次）：
 ## 配合校验用 fitprobe，不要临时手写
 
 `~/.claude/skills/ai-cad-pipeline/scripts/fitprobe.py`（自检 `test_fitprobe.py`）把本法则里的检查做成了带类型的查询：
+`assert_healthy`（加载壳/件先核体积区间+单体，防残骸假通过）、
 `clash`（干涉量+重叠块 bbox）、`fits`/`envelope`（真元件尺寸的方块能否进、扫可行位）、
 `wall_at`（斜壁/曲面壳在某高度的真实壁位——贴壁特征必须按它定位）、`solids`（一个打印件必须是一个实体）、
 `outside`（肋/柱有没有捅出外表面，同一件内 interfere 查不到）、`sag`（曲面前脸弧垂，平面元件要 < 0.5）、
 `plug_sweep`（沿插拔轴把 `PLUG_ENVELOPE` 线缆胶壳从壳外扫到插座面，同时核壳壁开孔四边余量）、
 `slide_path`（预装单元沿滑入轴逐站平移求交，抓终点 `clash==0` 但中途被内肋刮住）、
-`fpc_tail_length`（180° 折弯排线的闭合连续曲线长 vs 标量估算）。
+`fpc_tail_length`（180° 折弯排线的闭合连续曲线长 vs 标量估算）、
+`cylinder_axes`/`match_holes`（OCC `BRepAdaptor_Surface` 提取真实圆柱轴心与 EDA 孔位互证，避开 `Face.center()` 周期面偏一个半径的坑）、
+`under_board_top_z`（用全高柱求板下最高障碍 Z，防薄片截断）、
+`floating_stop_check`（板下浮动件上移小量全清、上移限位量碰限位条不碰 PCB 的正反对照）。
 
 每个查询答不上来会抛错说缺哪个参数，不会静默返回 0——退化布尔返回空集导致探针假阳性，是这条流程上最贵的错误。
 设计来源与完整拆解见 `ai-cad-pipeline/references/adam-plugin-lessons.md`。

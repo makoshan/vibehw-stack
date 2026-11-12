@@ -5,16 +5,20 @@ from __future__ import annotations
 from pathlib import Path
 import sys
 
-from build123d import Box, Pos
+from build123d import Box, Cylinder, GeomType, Pos
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from fitprobe import (  # noqa: E402
     PLUG_ENVELOPE,
+    assert_healthy,
     clash,
     fpc_tail_length,
+    floating_stop_check,
+    match_holes,
     plug_sweep,
     slide_path,
     solids,
+    under_board_top_z,
 )
 
 
@@ -72,7 +76,42 @@ def main() -> int:
     r_fpc = fpc_tail_length(span=4.0, dz=2.8, bend_r=1.4, extra_flat=0.33)
     assert r_fpc["curve_mm"] > r_fpc["scalar_mm"] + 1.5, r_fpc
 
-    print("PASS: test_fitprobe.py 必败反例全红，修正版全绿")
+    # 4. assert_healthy：布尔炸裂成小碎块或双分离实体必须抛 ValueError，正常单实体通过
+    try:
+        assert_healthy(Pos(0, 0, 0) * Box(1, 1, 1), min_vol=100.0, max_vol=500.0, name="shard")
+        raise AssertionError("碎片体积未拦截")
+    except ValueError:
+        pass
+    h_ok = assert_healthy(wall_good, min_vol=2000.0, max_vol=4000.0, name="wall_good")
+    assert h_ok["valid"] and h_ok["solids"] == 1, h_ok
+
+    # 5. cylinder_axes / match_holes：验证 Face.center() 在周期圆柱面上会偏一个半径，而 cylinder_axes 精确命中轴心
+    plate = (Pos(0, 0, 0) * Box(30.0, 20.0, 3.0)) - (Pos(10.0, 5.0, 0) * Cylinder(1.25, 4.0))
+    cyl_face = plate.faces().filter_by(GeomType.CYLINDER)[0]
+    fc = cyl_face.center()
+    assert abs(fc.X - 10.0) > 0.5 or abs(fc.Y - 5.0) > 0.5, f"Face.center() 未复现周期面半径偏移: {fc}"
+    r_hole_bad = match_holes([(10.2, 5.0)], plate, radius=1.25, pos_tol=0.05)
+    assert not r_hole_bad["clear"] and r_hole_bad["max_delta_mm"] > 0.15, r_hole_bad
+    r_hole_good = match_holes([(10.0, 5.0)], plate, radius=1.25, pos_tol=0.05)
+    assert r_hole_good["clear"] and r_hole_good["max_delta_mm"] == 0.0, r_hole_good
+
+    # 6. under_board_top_z：高柱 (z=0..5) 能抓到高出板面 (z=1.0..1.8) 的电极柱顶 z=3.2
+    tall_post = Pos(0, 0, 1.6) * Box(2.0, 2.0, 3.2)  # z=0..3.2
+    thin_res = under_board_top_z((-10, -10, 10, 10), (1.0, 1.8), [tall_post])
+    tall_res = under_board_top_z((-10, -10, 10, 10), (0.0, 5.0), [tall_post])
+    assert thin_res["max_top_z"] == 1.8 and tall_res["max_top_z"] == 3.2, (thin_res, tall_res)
+
+    # 7. floating_stop_check：浮动电极顶在 z=3.0，限位压条底在 z=3.15，PCB 底在 z=3.5
+    electrode = Pos(0, 0, 1.5) * Box(4.0, 4.0, 3.0)   # z=0..3.0
+    limiter = Pos(0, 0, 3.35) * Box(4.0, 4.0, 0.4)    # z=3.15..3.55
+    pcb_high = Pos(0, 0, 4.0) * Box(10.0, 10.0, 0.8)  # z=3.6..4.4（安全）
+    pcb_low = Pos(0, 0, 3.5) * Box(10.0, 10.0, 0.8)   # z=3.1..3.9（反例：比限位条还低，先撞 PCB）
+    r_float_bad = floating_stop_check(electrode, limiter, pcb_low, gap_dz=0.05, stop_dz=0.20)
+    assert not r_float_bad["clear"], r_float_bad
+    r_float_good = floating_stop_check(electrode, limiter, pcb_high, gap_dz=0.05, stop_dz=0.20)
+    assert r_float_good["clear"] and r_float_good["at_stop_dz"]["stop_clash"] >= 0.8, r_float_good
+
+    print("PASS: test_fitprobe.py 7 组必败反例全红，修正版全绿")
     return 0
 
 

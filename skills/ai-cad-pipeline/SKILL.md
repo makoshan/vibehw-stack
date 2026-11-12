@@ -43,10 +43,12 @@ read/create/update/delete/execute 五个动词，任意脚本只是逃生舱）�
 ```python
 import os, sys; sys.path.insert(0, os.path.expanduser("~/.claude/skills/ai-cad-pipeline/scripts"))
 from fitprobe import (
-    PLUG_ENVELOPE, clash, fits, envelope, wall_at, solids, outside, sag,
-    plug_sweep, slide_path, fpc_tail_length,
+    PLUG_ENVELOPE, assert_healthy, clash, fits, envelope, wall_at, solids, outside, sag,
+    plug_sweep, slide_path, fpc_tail_length, cylinder_axes, match_holes,
+    under_board_top_z, floating_stop_check,
 )
 
+assert_healthy(shell, 36000, 43500, "shell")  # 体积区间+单体健全防线（防残骸假通过）
 clash(frame, cap, detail=True)        # 干涉量 + 每块重叠的 bbox（只给总量等于让人猜）
 fits([fr, cap, ch], 69, 4, 48, (0, 21.5, 31))   # 真模块尺寸的方块能不能进
 envelope([...], 69, 4, 48, y_range=[...], z_range=[...])  # 扫退距×高度，返回所有可行位；无解时给最接近的
@@ -57,6 +59,9 @@ sag(body, z=34, x_half=34)            # 曲面前脸的弧垂，平屏要 < 0.5
 plug_sweep({"wall": w}, "x", -5, 3.5, (0, 0), "USB-C", (-6.8, 6.8, -4.05, 4.05), 0.2)  # 插头胶壳扫掠+开孔余量
 slide_path(shell, unit, "z", [-12, -8, -4, 0], tol=1.0)  # 预装单元逐站滑入求交
 fpc_tail_length(span=4.0, dz=2.8, bend_r=1.4)            # 180° 折弯排线闭合曲线长
+match_holes([(10.0, 5.0)], cradle, radius=1.25)          # OCC 圆柱轴心 vs EDA 孔坐标
+under_board_top_z((-10, -10, 10, 10), (0.0, 5.0), [post]) # 全高柱求板下最高障碍 Z
+floating_stop_check(elec, limiter, pcb, 0.05, 0.20)      # 浮动件上移限位正反对照
 ```
 
 **铁律**：探针答不上来要抛错说缺什么，绝不返回 0。退化的布尔切片返回空集会让探针「通过」，

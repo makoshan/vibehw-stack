@@ -19,13 +19,14 @@ Rules of use:
     from fitprobe import (
         PLUG_ENVELOPE, clash, fits, envelope, wall_at, solids, outside, sag,
         plug_sweep, slide_path, fpc_tail_length,
+        assert_healthy, cylinder_axes, match_holes, under_board_top_z, floating_stop_check,
     )
 """
 
 from __future__ import annotations
 
 import math
-from build123d import Align, Axis, Box, Compound, Location, Pos, Solid
+from build123d import Align, Axis, Box, Compound, GeomType, Location, Pos, Solid
 
 # pcb-enclosure-fit §2 默认线缆插头胶壳包络（宽 × 高，mm）
 PLUG_ENVELOPE: dict[str, tuple[float, float]] = {
@@ -290,4 +291,134 @@ def fpc_tail_length(span: float, dz: float, bend_r: float, extra_flat: float = 0
         "scalar_mm": round(scalar_mm, 3),
         "bend_arc_mm": round(arc, 3),
         "outer_od_mm": round(2.0 * float(bend_r), 3),
+    }
+
+
+def assert_healthy(part, min_vol: float, max_vol: float, name: str = "part", require_single: bool = True):
+    """Guard against degenerate boolean remnants before running clash/fit checks (pcb-enclosure-fit §6.6)."""
+    _need(part is not None, f"assert_healthy({name}): part is None")
+    _need(min_vol > 0 and max_vol >= min_vol, f"assert_healthy({name}): invalid volume bounds [{min_vol}, {max_vol}]")
+    sols = part.solids() if hasattr(part, "solids") else [part]
+    vol = sum(s.volume for s in sols) if sols else 0.0
+    valid = bool(getattr(part, "is_valid", True))
+    _need(valid, f"assert_healthy({name}): shape is not valid")
+    _need(min_vol <= vol <= max_vol, f"assert_healthy({name}): volume {vol:.2f} mm^3 outside [{min_vol}, {max_vol}]")
+    if require_single:
+        _need(len(sols) == 1, f"assert_healthy({name}): expected 1 solid, got {len(sols)}")
+    return {"name": name, "volume_mm3": round(vol, 2), "solids": len(sols), "valid": valid}
+
+
+def cylinder_axes(part, radius: float, tol: float = 0.05) -> dict[tuple[float, float], list[float]]:
+    """Extract true cylinder axis (x, y) -> [z_min, z_max] via BRepAdaptor_Surface (pcb-enclosure-fit §6.8).
+
+    Never use Face.center() on periodic cylindrical faces: it returns the parametric midpoint on the surface,
+    shifted by a full radius `r` from the true hole/boss center.
+    """
+    _need(part is not None and radius > 0, "cylinder_axes: needs part and radius > 0")
+    from OCP.BRepAdaptor import BRepAdaptor_Surface
+
+    out: dict[tuple[float, float], list[float]] = {}
+    for f in part.faces().filter_by(GeomType.CYLINDER):
+        if abs(f.radius - radius) <= tol:
+            ax = BRepAdaptor_Surface(f.wrapped).Cylinder().Axis().Location()
+            bb = f.bounding_box()
+            key = (round(ax.X(), 3), round(ax.Y(), 3))
+            span = out.setdefault(key, [ round(bb.min.Z, 3), round(bb.max.Z, 3) ])
+            span[0] = min(span[0], round(bb.min.Z, 3))
+            span[1] = max(span[1], round(bb.max.Z, 3))
+    _need(bool(out), f"cylinder_axes: no cylinder face found with radius={radius} +/- {tol}")
+    return out
+
+
+def match_holes(
+    expected_xy: list[tuple[float, float]],
+    part,
+    radius: float,
+    radius_tol: float = 0.05,
+    pos_tol: float = 0.05,
+):
+    """Cross-check expected PCB hole (x, y) coords against STEP cylinder axes (pcb-enclosure-fit §6.8)."""
+    _need(bool(expected_xy), "match_holes: expected_xy must not be empty")
+    found = cylinder_axes(part, radius, tol=radius_tol)
+    rows = []
+    for ex, ey in expected_xy:
+        (px, py), z_span = min(found.items(), key=lambda kv: (kv[0][0] - ex) ** 2 + (kv[0][1] - ey) ** 2)
+        d = math.hypot(px - ex, py - ey)
+        rows.append({
+            "expected": (round(ex, 3), round(ey, 3)),
+            "actual": (px, py),
+            "z_span": z_span,
+            "delta_mm": round(d, 4),
+            "ok": d <= pos_tol,
+        })
+    max_d = max(r["delta_mm"] for r in rows)
+    count_ok = len(found) == len(expected_xy)
+    return {
+        "clear": all(r["ok"] for r in rows) and count_ok,
+        "expected_count": len(expected_xy),
+        "found_count": len(found),
+        "max_delta_mm": max_d,
+        "holes": rows,
+    }
+
+
+def under_board_top_z(
+    board_xy_bounds: tuple[float, float, float, float],
+    z_range: tuple[float, float],
+    under_parts,
+) -> dict:
+    """Tall-column intersection to find the highest obstacle beneath a board (height-stack.md §2).
+
+    Intersecting only the thin PCB slab (e.g. z=1.0..1.8) clips anything taller at 1.8 mm and misses
+    posts protruding to z=3.2 mm. A full-height column over z_range catches the true top Z.
+    """
+    _need(len(board_xy_bounds) == 4, "under_board_top_z: board_xy_bounds needs (x0, y0, x1, y1)")
+    _need(len(z_range) == 2 and z_range[1] > z_range[0], "under_board_top_z: z_range needs (z_min, z_max)")
+    x0, y0, x1, y1 = (float(v) for v in board_xy_bounds)
+    z0, z1 = float(z_range[0]), float(z_range[1])
+    _need(x1 > x0 and y1 > y0, "under_board_top_z: degenerate XY bounds")
+    col = Location((x0, y0, z0)) * Box(x1 - x0, y1 - y0, z1 - z0, align=(Align.MIN, Align.MIN, Align.MIN))
+    parts_list = list(under_parts.values()) if isinstance(under_parts, dict) else list(under_parts)
+    _need(bool(parts_list), "under_board_top_z: under_parts must not be empty")
+
+    max_z = None
+    for p in parts_list:
+        ov = col & p
+        if _vol(ov) > 0:
+            top = ov.bounding_box().max.Z
+            max_z = top if max_z is None else max(max_z, top)
+    _need(max_z is not None, "under_board_top_z: column did not intersect any under_parts")
+    return {"max_top_z": round(float(max_z), 3)}
+
+
+def floating_stop_check(
+    floating_part,
+    stop_part,
+    pcb_part,
+    gap_dz: float,
+    stop_dz: float,
+    tol: float = 0.01,
+) -> dict:
+    """Positive + negative control for under-board floating parts like straps/electrodes (height-stack.md §3).
+
+    1. At small upward play `gap_dz`, floating_part must clear both `stop_part` and `pcb_part`.
+    2. At `stop_dz`, floating_part must engage `stop_part` (clash > tol) while still clearing `pcb_part`
+       so the PCB never acts as the mechanical hard stop.
+    """
+    _need(0 < gap_dz < stop_dz, "floating_stop_check: requires 0 < gap_dz < stop_dz")
+    f_gap = _translate_solids(floating_part, (0.0, 0.0, float(gap_dz)))
+    f_stop = _translate_solids(floating_part, (0.0, 0.0, float(stop_dz)))
+    stop_sols = stop_part.solids() if hasattr(stop_part, "solids") else [stop_part]
+    pcb_sols = pcb_part.solids() if hasattr(pcb_part, "solids") else [pcb_part]
+
+    gap_stop = sum(clash(a, b) for a in f_gap for b in stop_sols)
+    gap_pcb = sum(clash(a, b) for a in f_gap for b in pcb_sols)
+    hit_stop = sum(clash(a, b) for a in f_stop for b in stop_sols)
+    hit_pcb = sum(clash(a, b) for a in f_stop for b in pcb_sols)
+
+    ok = (gap_stop <= tol) and (gap_pcb <= tol) and (hit_stop > tol) and (hit_pcb <= tol)
+    return {
+        "clear": ok,
+        "at_gap_dz": {"dz": gap_dz, "stop_clash": round(gap_stop, 4), "pcb_clash": round(gap_pcb, 4)},
+        "at_stop_dz": {"dz": stop_dz, "stop_clash": round(hit_stop, 4), "pcb_clash": round(hit_pcb, 4)},
     }
