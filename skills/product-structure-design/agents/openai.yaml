@@ -1,0 +1,4 @@
+interface:
+  display_name: "产品结构设计"
+  short_description: "从器件布局、尺寸链到外壳装配验证，适用于肌电手环等紧凑硬件"
+  default_prompt: "用 $product-structure-design 优化肌电手环的器件堆叠和外壳，给出带尺寸与验证依据的装配图。"

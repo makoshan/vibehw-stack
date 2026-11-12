@@ -1,0 +1,32 @@
+{
+  "name": "vibehw-stack",
+  "displayName": "vibehw-stack",
+  "version": "0.3.5",
+  "description": "The agent engineering stack for real hardware (inspired by pstack): from breadboard to schematic, JLCPCB/LCSC basic parts selection, KiCad autoroute & DFM gates, to 3D-printed enclosure fit.",
+  "author": {
+    "name": "Mako Shan"
+  },
+  "homepage": "https://github.com/makoshan/vibehw-stack",
+  "repository": "https://github.com/makoshan/vibehw-stack",
+  "license": "MIT",
+  "keywords": [
+    "vibehw-stack",
+    "hardware",
+    "pcb",
+    "kicad",
+    "jlcpcb",
+    "lcsc",
+    "easyeda",
+    "cad",
+    "3d-printing"
+  ],
+  "category": "developer-tools",
+  "tags": [
+    "hardware",
+    "pcb",
+    "jlcpcb",
+    "kicad",
+    "cad"
+  ],
+  "skills": "./skills/"
+}

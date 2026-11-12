@@ -1,0 +1,1158 @@
+{
+ "source": "https://zap.mutual.solutions/compare.json",
+ "data_written": "2026-10-27T01:07:33Z",
+ "measured": "2026-10-12 to 2026-10-26",
+ "note": "只存链接、提交号和公开数字；板子文件按各自许可证留在本地缓存，不进仓库",
+ "boards": [
+  {
+   "id": "b01-cm4-lvds",
+   "name": "Antmicro CM4 baseboard LVDS adapter",
+   "licence": "Apache-2.0",
+   "source": "https://github.com/antmicro/cm4-baseboard-lvds-adapter",
+   "commit": "4af945ed558e58e4b8aea6fe909fc33d78b63f6f",
+   "connections": 377,
+   "pcb": null,
+   "published": {
+    "zap": {
+     "unconnected": 0,
+     "rule_errors": 13,
+     "shorts": 0,
+     "time_s": 408,
+     "outcome": "finished"
+    },
+    "zap_60": {
+     "unconnected": 0,
+     "rule_errors": 13,
+     "shorts": 0,
+     "time_s": 418,
+     "outcome": "finished"
+    },
+    "tracemaker": {
+     "unconnected": 1,
+     "rule_errors": 9,
+     "shorts": 0,
+     "time_s": 3602,
+     "outcome": "stopped at limit"
+    },
+    "freerouting": {
+     "unconnected": 6,
+     "rule_errors": 137,
+     "shorts": 0,
+     "time_s": 733,
+     "outcome": "finished"
+    },
+    "human": {
+     "unconnected": 0,
+     "rule_errors": 1,
+     "shorts": 0,
+     "time_s": null,
+     "outcome": "reference"
+    }
+   }
+  },
+  {
+   "id": "b02-ecp5-dcscm",
+   "name": "Antmicro ECP5 DC-SCM",
+   "licence": "Apache-2.0",
+   "source": "https://github.com/antmicro/ecp5-dc-scm",
+   "commit": "0019313fd2e214f618788e5e61636a4a023ee361",
+   "connections": 1843,
+   "pcb": null,
+   "published": {
+    "zap": {
+     "unconnected": 100,
+     "rule_errors": 45,
+     "shorts": 0,
+     "time_s": 1001,
+     "outcome": "finished"
+    },
+    "zap_60": {
+     "unconnected": 26,
+     "rule_errors": 20,
+     "shorts": 0,
+     "time_s": 3601,
+     "outcome": "stopped at limit"
+    },
+    "tracemaker": {
+     "unconnected": 352,
+     "rule_errors": 23,
+     "shorts": 0,
+     "time_s": 3602,
+     "outcome": "stopped at limit"
+    },
+    "freerouting": {
+     "unconnected": 1818,
+     "rule_errors": 8,
+     "shorts": 0,
+     "time_s": 3689,
+     "outcome": "stopped at limit"
+    },
+    "human": {
+     "unconnected": 0,
+     "rule_errors": 9,
+     "shorts": 0,
+     "time_s": null,
+     "outcome": "reference"
+    }
+   }
+  },
+  {
+   "id": "b03-ftdi-jtag",
+   "name": "FTDI JTAG programmer",
+   "licence": "CERN-OHL-P-2.0",
+   "source": "https://github.com/anthony-bernaert/ftdi-jtag-programmer",
+   "commit": "c33005ef528526c137ba8fd1e9cf4e8ceab63a1f",
+   "connections": 264,
+   "pcb": null,
+   "published": {
+    "zap": {
+     "unconnected": 0,
+     "rule_errors": 0,
+     "shorts": 0,
+     "time_s": 22,
+     "outcome": "finished"
+    },
+    "zap_60": {
+     "unconnected": 0,
+     "rule_errors": 0,
+     "shorts": 0,
+     "time_s": 25,
+     "outcome": "finished"
+    },
+    "tracemaker": {
+     "unconnected": 0,
+     "rule_errors": 3,
+     "shorts": 0,
+     "time_s": 72,
+     "outcome": "finished"
+    },
+    "freerouting": {
+     "unconnected": 11,
+     "rule_errors": 4,
+     "shorts": 0,
+     "time_s": 205,
+     "outcome": "finished"
+    },
+    "human": {
+     "unconnected": 0,
+     "rule_errors": 0,
+     "shorts": 0,
+     "time_s": null,
+     "outcome": "reference"
+    }
+   }
+  },
+  {
+   "id": "b04-trellis",
+   "name": "Trellis Core",
+   "licence": "CERN-OHL-P-2.0",
+   "source": "https://github.com/protolux-electronics/trellis_core",
+   "commit": "db4fe71623c14bcea47d7457d0db4c99d3899124",
+   "connections": 208,
+   "pcb": null,
+   "published": {
+    "zap": {
+     "unconnected": 0,
+     "rule_errors": 0,
+     "shorts": 0,
+     "time_s": 17,
+     "outcome": "finished"
+    },
+    "zap_60": {
+     "unconnected": 0,
+     "rule_errors": 0,
+     "shorts": 0,
+     "time_s": 25,
+     "outcome": "finished"
+    },
+    "tracemaker": {
+     "unconnected": 0,
+     "rule_errors": 0,
+     "shorts": 0,
+     "time_s": 559,
+     "outcome": "finished"
+    },
+    "freerouting": {
+     "unconnected": 0,
+     "rule_errors": 2,
+     "shorts": 0,
+     "time_s": 130,
+     "outcome": "finished"
+    },
+    "human": {
+     "unconnected": 0,
+     "rule_errors": 0,
+     "shorts": 0,
+     "time_s": null,
+     "outcome": "reference"
+    }
+   }
+  },
+  {
+   "id": "b05-bitaxe",
+   "name": "Bitaxe Ultra (fork)",
+   "licence": "CERN-OHL-S-2.0",
+   "source": "https://github.com/BastelPichi/bitaxe",
+   "commit": "0c3e71fd54fc0edef4c19c06d2320ef5468adc6a",
+   "connections": 333,
+   "pcb": null,
+   "published": {
+    "zap": {
+     "unconnected": 0,
+     "rule_errors": 3,
+     "shorts": 0,
+     "time_s": 368,
+     "outcome": "finished"
+    },
+    "zap_60": {
+     "unconnected": 0,
+     "rule_errors": 3,
+     "shorts": 0,
+     "time_s": 375,
+     "outcome": "finished"
+    },
+    "tracemaker": {
+     "unconnected": 3,
+     "rule_errors": 3,
+     "shorts": 0,
+     "time_s": 3601,
+     "outcome": "stopped at limit"
+    },
+    "freerouting": {
+     "unconnected": 1,
+     "rule_errors": 69,
+     "shorts": 1,
+     "time_s": 86,
+     "outcome": "finished"
+    },
+    "human": {
+     "unconnected": 0,
+     "rule_errors": 3,
+     "shorts": 0,
+     "time_s": null,
+     "outcome": "reference"
+    }
+   }
+  },
+  {
+   "id": "b06-loadcell",
+   "name": "Ender-3 load-cell bed-levelling sensor",
+   "licence": "MIT",
+   "source": "https://github.com/jujojujo2003/Ender-3-3DPrinter-Load-Cell-Bed-Leveling-Sensor",
+   "commit": "eae5c6f3e67d0b7f83a500bfb3d1aef38cb69b0b",
+   "connections": 157,
+   "pcb": null,
+   "published": {
+    "zap": {
+     "unconnected": 0,
+     "rule_errors": 2,
+     "shorts": 0,
+     "time_s": 22,
+     "outcome": "finished"
+    },
+    "zap_60": {
+     "unconnected": 0,
+     "rule_errors": 2,
+     "shorts": 0,
+     "time_s": 23,
+     "outcome": "finished"
+    },
+    "tracemaker": {
+     "unconnected": 0,
+     "rule_errors": 2,
+     "shorts": 0,
+     "time_s": 109,
+     "outcome": "finished"
+    },
+    "freerouting": {
+     "unconnected": 1,
+     "rule_errors": 2,
+     "shorts": 0,
+     "time_s": 71,
+     "outcome": "finished"
+    },
+    "human": {
+     "unconnected": 0,
+     "rule_errors": 0,
+     "shorts": 0,
+     "time_s": null,
+     "outcome": "reference"
+    }
+   }
+  },
+  {
+   "id": "b07-rp2040",
+   "name": "RP2040 development board",
+   "licence": "MIT",
+   "source": "https://github.com/acornitum/fucked-up-rp2040-devboard",
+   "commit": "d94328619f4fcaef2f2d62aa42c62c789a463d56",
+   "connections": 139,
+   "pcb": null,
+   "published": {
+    "zap": {
+     "unconnected": 1,
+     "rule_errors": 4,
+     "shorts": 0,
+     "time_s": 146,
+     "outcome": "finished"
+    },
+    "zap_60": {
+     "unconnected": 1,
+     "rule_errors": 4,
+     "shorts": 0,
+     "time_s": 3601,
+     "outcome": "stopped at limit"
+    },
+    "tracemaker": {
+     "unconnected": 11,
+     "rule_errors": 5,
+     "shorts": 0,
+     "time_s": 2174,
+     "outcome": "finished"
+    },
+    "freerouting": {
+     "unconnected": 17,
+     "rule_errors": 35,
+     "shorts": 0,
+     "time_s": 257,
+     "outcome": "finished"
+    },
+    "human": {
+     "unconnected": 0,
+     "rule_errors": 3,
+     "shorts": 0,
+     "time_s": null,
+     "outcome": "reference"
+    }
+   }
+  },
+  {
+   "id": "b08-discretesim",
+   "name": "discretesim test board",
+   "licence": "MIT",
+   "source": "https://github.com/cnlohr/discretesim",
+   "commit": "f7a169ee07b18b6c857d23582474b8ba20185436",
+   "connections": 582,
+   "pcb": "hwtest/hwtest.kicad_pcb",
+   "published": {
+    "zap": {
+     "unconnected": 0,
+     "rule_errors": 0,
+     "shorts": 0,
+     "time_s": 42,
+     "outcome": "finished"
+    },
+    "zap_60": {
+     "unconnected": 0,
+     "rule_errors": 0,
+     "shorts": 0,
+     "time_s": 44,
+     "outcome": "finished"
+    },
+    "tracemaker": {
+     "unconnected": 25,
+     "rule_errors": 0,
+     "shorts": 0,
+     "time_s": 3007,
+     "outcome": "finished"
+    },
+    "freerouting": {
+     "unconnected": 62,
+     "rule_errors": 0,
+     "shorts": 0,
+     "time_s": 613,
+     "outcome": "finished"
+    },
+    "human": {
+     "unconnected": 0,
+     "rule_errors": 0,
+     "shorts": 0,
+     "time_s": null,
+     "outcome": "reference"
+    }
+   }
+  },
+  {
+   "id": "b09-waterlevel",
+   "name": "Arduino water-level monitor",
+   "licence": "MIT",
+   "source": "https://github.com/Srushti-D-Hebbar/arduino-water-level-monitor",
+   "commit": "7b47f46949e99d8075590de0c5a08a550d646d84",
+   "connections": 52,
+   "pcb": null,
+   "published": {
+    "zap": {
+     "unconnected": 0,
+     "rule_errors": 0,
+     "shorts": 0,
+     "time_s": 4,
+     "outcome": "finished"
+    },
+    "zap_60": {
+     "unconnected": 0,
+     "rule_errors": 0,
+     "shorts": 0,
+     "time_s": 6,
+     "outcome": "finished"
+    },
+    "tracemaker": {
+     "unconnected": 0,
+     "rule_errors": 0,
+     "shorts": 0,
+     "time_s": 11,
+     "outcome": "finished"
+    },
+    "freerouting": {
+     "unconnected": 0,
+     "rule_errors": 7,
+     "shorts": 0,
+     "time_s": 17,
+     "outcome": "finished"
+    },
+    "human": {
+     "unconnected": 0,
+     "rule_errors": 0,
+     "shorts": 0,
+     "time_s": null,
+     "outcome": "reference"
+    }
+   }
+  },
+  {
+   "id": "b10-ecp5-bga381",
+   "name": "ECP5 BGA-381 FT2232HQ FIFO board",
+   "licence": "MIT",
+   "source": "https://github.com/gildobjanschi/ECP5_BGA381_FT2232HQ_FIFO_EXT",
+   "commit": "81403f7487a9eded36c6500b8c8b6c12a6705f81",
+   "connections": 144,
+   "pcb": null,
+   "published": {
+    "zap": {
+     "unconnected": 0,
+     "rule_errors": 0,
+     "shorts": 0,
+     "time_s": 61,
+     "outcome": "finished"
+    },
+    "zap_60": {
+     "unconnected": 0,
+     "rule_errors": 0,
+     "shorts": 0,
+     "time_s": 63,
+     "outcome": "finished"
+    },
+    "tracemaker": {
+     "unconnected": 6,
+     "rule_errors": 0,
+     "shorts": 0,
+     "time_s": 3602,
+     "outcome": "stopped at limit"
+    },
+    "freerouting": {
+     "unconnected": 0,
+     "rule_errors": 0,
+     "shorts": 0,
+     "time_s": 120,
+     "outcome": "finished"
+    },
+    "human": {
+     "unconnected": 0,
+     "rule_errors": 0,
+     "shorts": 0,
+     "time_s": null,
+     "outcome": "reference"
+    }
+   }
+  },
+  {
+   "id": "256foundation_emberone00-pcb",
+   "name": "EmberOne",
+   "licence": "CERN-OHL-S-2.0",
+   "source": "https://github.com/256foundation/emberone00-pcb",
+   "commit": "b21b32ca49710b99cb75f86406b0df5190c9beb4",
+   "connections": 1125,
+   "pcb": null,
+   "published": {
+    "zap": {
+     "unconnected": 5,
+     "rule_errors": 1,
+     "shorts": 0,
+     "time_s": 398,
+     "outcome": "finished"
+    },
+    "zap_60": {
+     "unconnected": 0,
+     "rule_errors": 1,
+     "shorts": 0,
+     "time_s": 3614,
+     "outcome": "stopped at limit"
+    },
+    "tracemaker": {
+     "unconnected": 18,
+     "rule_errors": 0,
+     "shorts": 0,
+     "time_s": 3602,
+     "outcome": "stopped at limit"
+    },
+    "freerouting": {
+     "unconnected": 0,
+     "rule_errors": 218,
+     "shorts": 0,
+     "time_s": 2653,
+     "outcome": "finished"
+    },
+    "human": {
+     "unconnected": 0,
+     "rule_errors": 0,
+     "shorts": 0,
+     "time_s": null,
+     "outcome": "reference"
+    }
+   }
+  },
+  {
+   "id": "CNES_argos-demo-board",
+   "name": "Argos demo board",
+   "licence": "CERN-OHL-S-2.0",
+   "source": "https://github.com/CNES/argos-demo-board",
+   "commit": "1eccb3f20cb9004c046dba82b72bf85c500efcaa",
+   "connections": 234,
+   "pcb": "ARGOS DEMO.kicad_pcb",
+   "published": {
+    "zap": {
+     "unconnected": 0,
+     "rule_errors": 0,
+     "shorts": 0,
+     "time_s": 19,
+     "outcome": "finished"
+    },
+    "zap_60": {
+     "unconnected": 0,
+     "rule_errors": 0,
+     "shorts": 0,
+     "time_s": 24,
+     "outcome": "finished"
+    },
+    "tracemaker": {
+     "unconnected": 0,
+     "rule_errors": 0,
+     "shorts": 0,
+     "time_s": 511,
+     "outcome": "finished"
+    },
+    "freerouting": {
+     "unconnected": 0,
+     "rule_errors": 1,
+     "shorts": 0,
+     "time_s": 104,
+     "outcome": "finished"
+    },
+    "human": {
+     "unconnected": 0,
+     "rule_errors": 0,
+     "shorts": 0,
+     "time_s": null,
+     "outcome": "reference"
+    }
+   }
+  },
+  {
+   "id": "OLIMEX_RP2350-PICO2-BB48",
+   "name": "RP2350-PICO2-BB48",
+   "licence": "MIT",
+   "source": "https://github.com/OLIMEX/RP2350-PICO2-BB48",
+   "commit": "74b030363ca03eea5bfa6dac59cbcd9e4277e910",
+   "connections": 269,
+   "pcb": null,
+   "published": {
+    "zap": {
+     "unconnected": 32,
+     "rule_errors": 2,
+     "shorts": 0,
+     "time_s": 406,
+     "outcome": "finished"
+    },
+    "zap_60": {
+     "unconnected": 26,
+     "rule_errors": 1,
+     "shorts": 0,
+     "time_s": 3600,
+     "outcome": "stopped at limit"
+    },
+    "tracemaker": {
+     "unconnected": 30,
+     "rule_errors": 2,
+     "shorts": 0,
+     "time_s": 3601,
+     "outcome": "stopped at limit"
+    },
+    "freerouting": {
+     "unconnected": 8,
+     "rule_errors": 245,
+     "shorts": 0,
+     "time_s": 557,
+     "outcome": "finished"
+    },
+    "human": {
+     "unconnected": 0,
+     "rule_errors": 0,
+     "shorts": 0,
+     "time_s": null,
+     "outcome": "reference"
+    }
+   }
+  },
+  {
+   "id": "antmicro_cvbs-mipi-bridge",
+   "name": "Antmicro CVBS-to-MIPI bridge",
+   "licence": "Apache-2.0",
+   "source": "https://github.com/antmicro/cvbs-mipi-bridge",
+   "commit": "7cbcec2bceaf6e1efd25cce1d73ff4989dfcfe02",
+   "connections": 211,
+   "pcb": null,
+   "published": {
+    "zap": {
+     "unconnected": 0,
+     "rule_errors": 2,
+     "shorts": 0,
+     "time_s": 64,
+     "outcome": "finished"
+    },
+    "zap_60": {
+     "unconnected": 0,
+     "rule_errors": 2,
+     "shorts": 0,
+     "time_s": 66,
+     "outcome": "finished"
+    },
+    "tracemaker": {
+     "unconnected": 3,
+     "rule_errors": 1,
+     "shorts": 0,
+     "time_s": 3601,
+     "outcome": "stopped at limit"
+    },
+    "freerouting": {
+     "unconnected": 4,
+     "rule_errors": 16,
+     "shorts": 0,
+     "time_s": 410,
+     "outcome": "finished"
+    },
+    "human": {
+     "unconnected": 0,
+     "rule_errors": 0,
+     "shorts": 0,
+     "time_s": null,
+     "outcome": "reference"
+    }
+   }
+  },
+  {
+   "id": "antmicro_dual-ipex-csi-interposer",
+   "name": "Antmicro dual IPEX CSI interposer",
+   "licence": "Apache-2.0",
+   "source": "https://github.com/antmicro/dual-ipex-csi-interposer",
+   "commit": "6b6bd0af5aafe13c02377d534a23a6373922f350",
+   "connections": 85,
+   "pcb": null,
+   "published": {
+    "zap": {
+     "unconnected": 0,
+     "rule_errors": 9,
+     "shorts": 0,
+     "time_s": 30,
+     "outcome": "finished"
+    },
+    "zap_60": {
+     "unconnected": 0,
+     "rule_errors": 9,
+     "shorts": 0,
+     "time_s": 33,
+     "outcome": "finished"
+    },
+    "tracemaker": {
+     "unconnected": 0,
+     "rule_errors": 69,
+     "shorts": 0,
+     "time_s": 412,
+     "outcome": "finished"
+    },
+    "freerouting": {
+     "unconnected": 0,
+     "rule_errors": 68,
+     "shorts": 0,
+     "time_s": 71,
+     "outcome": "finished"
+    },
+    "human": {
+     "unconnected": 0,
+     "rule_errors": 0,
+     "shorts": 0,
+     "time_s": null,
+     "outcome": "reference"
+    }
+   }
+  },
+  {
+   "id": "antmicro_gmsl-serializer",
+   "name": "Antmicro GMSL serializer",
+   "licence": "Apache-2.0",
+   "source": "https://github.com/antmicro/gmsl-serializer",
+   "commit": "58641df7b331050bbb4456cb4cb73e3975ae9de9",
+   "connections": 256,
+   "pcb": null,
+   "published": {
+    "zap": {
+     "unconnected": 4,
+     "rule_errors": 15,
+     "shorts": 0,
+     "time_s": 131,
+     "outcome": "finished"
+    },
+    "zap_60": {
+     "unconnected": 1,
+     "rule_errors": 13,
+     "shorts": 0,
+     "time_s": 3601,
+     "outcome": "stopped at limit"
+    },
+    "tracemaker": {
+     "unconnected": 2,
+     "rule_errors": 13,
+     "shorts": 0,
+     "time_s": 3382,
+     "outcome": "finished"
+    },
+    "freerouting": {
+     "unconnected": 20,
+     "rule_errors": 18,
+     "shorts": 0,
+     "time_s": 547,
+     "outcome": "finished"
+    },
+    "human": {
+     "unconnected": 0,
+     "rule_errors": 7,
+     "shorts": 0,
+     "time_s": null,
+     "outcome": "reference"
+    }
+   }
+  },
+  {
+   "id": "antmicro_pmod-i3c-sensor-board",
+   "name": "Antmicro PMOD I3C sensor board",
+   "licence": "Apache-2.0",
+   "source": "https://github.com/antmicro/pmod-i3c-sensor-board",
+   "commit": "5ee5d34ff918422fe7af59f7ffdc9d4bdabf18a7",
+   "connections": 185,
+   "pcb": null,
+   "published": {
+    "zap": {
+     "unconnected": 0,
+     "rule_errors": 7,
+     "shorts": 0,
+     "time_s": 6,
+     "outcome": "finished"
+    },
+    "zap_60": {
+     "unconnected": 0,
+     "rule_errors": 7,
+     "shorts": 0,
+     "time_s": 7,
+     "outcome": "finished"
+    },
+    "tracemaker": {
+     "unconnected": 0,
+     "rule_errors": 7,
+     "shorts": 0,
+     "time_s": 324,
+     "outcome": "finished"
+    },
+    "freerouting": {
+     "unconnected": 1,
+     "rule_errors": 86,
+     "shorts": 2,
+     "time_s": 414,
+     "outcome": "finished"
+    },
+    "human": {
+     "unconnected": 0,
+     "rule_errors": 7,
+     "shorts": 0,
+     "time_s": null,
+     "outcome": "reference"
+    }
+   }
+  },
+  {
+   "id": "antmicro_signal-integrity-test-board",
+   "name": "Antmicro signal-integrity test board",
+   "licence": "Apache-2.0",
+   "source": "https://github.com/antmicro/signal-integrity-test-board",
+   "commit": "de0b5922c372481bb146cbd1d0a9f3b7e97c124a",
+   "connections": 107,
+   "pcb": null,
+   "published": {
+    "zap": {
+     "unconnected": 0,
+     "rule_errors": 0,
+     "shorts": 0,
+     "time_s": 12,
+     "outcome": "finished"
+    },
+    "zap_60": {
+     "unconnected": 0,
+     "rule_errors": 0,
+     "shorts": 0,
+     "time_s": 13,
+     "outcome": "finished"
+    },
+    "tracemaker": {
+     "unconnected": 5,
+     "rule_errors": 0,
+     "shorts": 0,
+     "time_s": 319,
+     "outcome": "finished"
+    },
+    "freerouting": {
+     "unconnected": 0,
+     "rule_errors": 0,
+     "shorts": 0,
+     "time_s": 529,
+     "outcome": "finished"
+    },
+    "human": {
+     "unconnected": 0,
+     "rule_errors": 3,
+     "shorts": 0,
+     "time_s": null,
+     "outcome": "reference"
+    }
+   }
+  },
+  {
+   "id": "antmicro_stm32h7-hdmi-board-sodimm",
+   "name": "Antmicro STM32H7 HDMI SO-DIMM board",
+   "licence": "Apache-2.0",
+   "source": "https://github.com/antmicro/stm32h7-hdmi-board-sodimm",
+   "commit": "27e3ac9968983f236155c288ded30beb1a2d24a1",
+   "connections": 567,
+   "pcb": null,
+   "published": {
+    "zap": {
+     "unconnected": 0,
+     "rule_errors": 4,
+     "shorts": 0,
+     "time_s": 150,
+     "outcome": "finished"
+    },
+    "zap_60": {
+     "unconnected": 0,
+     "rule_errors": 4,
+     "shorts": 0,
+     "time_s": 158,
+     "outcome": "finished"
+    },
+    "tracemaker": {
+     "unconnected": 36,
+     "rule_errors": 203,
+     "shorts": 0,
+     "time_s": 3601,
+     "outcome": "stopped at limit"
+    },
+    "freerouting": {
+     "unconnected": 0,
+     "rule_errors": 240,
+     "shorts": 0,
+     "time_s": 3621,
+     "outcome": "stopped at limit"
+    },
+    "human": {
+     "unconnected": 0,
+     "rule_errors": 4,
+     "shorts": 0,
+     "time_s": null,
+     "outcome": "reference"
+    }
+   }
+  },
+  {
+   "id": "apfaudio_tiliqua-hardware",
+   "name": "Tiliqua (apfaudio)",
+   "licence": "CERN-OHL-S-2.0",
+   "source": "https://github.com/apfaudio/tiliqua-hardware",
+   "commit": "4ee5878ae821a6b7096f6aed6795dc1349475cb5",
+   "connections": 531,
+   "pcb": "hardware/tiliqua-motherboard/tiliqua-motherboard.kicad_pcb",
+   "published": {
+    "zap": {
+     "unconnected": 2,
+     "rule_errors": 17,
+     "shorts": 0,
+     "time_s": 536,
+     "outcome": "finished"
+    },
+    "zap_60": {
+     "unconnected": 0,
+     "rule_errors": 17,
+     "shorts": 0,
+     "time_s": 1452,
+     "outcome": "finished"
+    },
+    "tracemaker": {
+     "unconnected": 42,
+     "rule_errors": 16,
+     "shorts": 0,
+     "time_s": 3601,
+     "outcome": "stopped at limit"
+    },
+    "freerouting": {
+     "unconnected": 0,
+     "rule_errors": 242,
+     "shorts": 0,
+     "time_s": 1727,
+     "outcome": "finished"
+    },
+    "human": {
+     "unconnected": 0,
+     "rule_errors": 14,
+     "shorts": 0,
+     "time_s": null,
+     "outcome": "reference"
+    }
+   }
+  },
+  {
+   "id": "buildbotics_bbctrl-pcb-new",
+   "name": "Buildbotics controller",
+   "licence": "CERN-OHL-S-2.0",
+   "source": "https://github.com/buildbotics/bbctrl-pcb-new",
+   "commit": "1a2f36ddc4797ac05e45405fb5664ff1f7ca7974",
+   "connections": 890,
+   "pcb": null,
+   "published": {
+    "zap": {
+     "unconnected": 8,
+     "rule_errors": 4,
+     "shorts": 0,
+     "time_s": 520,
+     "outcome": "finished"
+    },
+    "zap_60": {
+     "unconnected": 7,
+     "rule_errors": 4,
+     "shorts": 0,
+     "time_s": 3600,
+     "outcome": "stopped at limit"
+    },
+    "tracemaker": {
+     "unconnected": 46,
+     "rule_errors": 4,
+     "shorts": 0,
+     "time_s": 3601,
+     "outcome": "stopped at limit"
+    },
+    "freerouting": {
+     "unconnected": 26,
+     "rule_errors": 203,
+     "shorts": 0,
+     "time_s": 3618,
+     "outcome": "stopped at limit"
+    },
+    "human": {
+     "unconnected": 0,
+     "rule_errors": 5,
+     "shorts": 0,
+     "time_s": null,
+     "outcome": "reference"
+    }
+   }
+  },
+  {
+   "id": "greatscottgadgets_hackrf-pro",
+   "name": "HackRF Pro",
+   "licence": "CERN-OHL-P-2.0",
+   "source": "https://github.com/greatscottgadgets/hackrf-pro",
+   "commit": "359b98f2451395408bc25dae64efa9fc518e93d0",
+   "connections": 1677,
+   "pcb": null,
+   "published": {
+    "zap": {
+     "unconnected": 10,
+     "rule_errors": 9,
+     "shorts": 0,
+     "time_s": 661,
+     "outcome": "finished"
+    },
+    "zap_60": {
+     "unconnected": 3,
+     "rule_errors": 9,
+     "shorts": 0,
+     "time_s": 3600,
+     "outcome": "stopped at limit"
+    },
+    "tracemaker": {
+     "unconnected": 130,
+     "rule_errors": 9,
+     "shorts": 0,
+     "time_s": 3602,
+     "outcome": "stopped at limit"
+    },
+    "freerouting": {
+     "unconnected": 80,
+     "rule_errors": 210,
+     "shorts": 0,
+     "time_s": 3626,
+     "outcome": "stopped at limit"
+    },
+    "human": {
+     "unconnected": 0,
+     "rule_errors": 8,
+     "shorts": 0,
+     "time_s": null,
+     "outcome": "reference"
+    }
+   }
+  },
+  {
+   "id": "id8-engineering_seven-hardware",
+   "name": "Seven",
+   "licence": "CERN-OHL-P-2.0",
+   "source": "https://github.com/id8-engineering/seven-hardware",
+   "commit": "7c69a1482ffd1dddc206294a55602477c55e17d8",
+   "connections": 240,
+   "pcb": null,
+   "published": {
+    "zap": {
+     "unconnected": 2,
+     "rule_errors": 0,
+     "shorts": 0,
+     "time_s": 376,
+     "outcome": "finished"
+    },
+    "zap_60": {
+     "unconnected": 1,
+     "rule_errors": 0,
+     "shorts": 0,
+     "time_s": 3600,
+     "outcome": "stopped at limit"
+    },
+    "tracemaker": {
+     "unconnected": 14,
+     "rule_errors": 2,
+     "shorts": 0,
+     "time_s": 3603,
+     "outcome": "stopped at limit"
+    },
+    "freerouting": {
+     "unconnected": 18,
+     "rule_errors": 7,
+     "shorts": 0,
+     "time_s": 692,
+     "outcome": "finished"
+    },
+    "human": {
+     "unconnected": 0,
+     "rule_errors": 0,
+     "shorts": 0,
+     "time_s": null,
+     "outcome": "reference"
+    }
+   }
+  },
+  {
+   "id": "piotr-binkowski_kintex-pcie-board",
+   "name": "Kintex PCIe board",
+   "licence": "Apache-2.0",
+   "source": "https://github.com/piotr-binkowski/kintex-pcie-board",
+   "commit": "056792c009a8920d4ef11e76ba3284ee58376078",
+   "connections": 706,
+   "pcb": null,
+   "published": {
+    "zap": {
+     "unconnected": 2,
+     "rule_errors": 32,
+     "shorts": 0,
+     "time_s": 620,
+     "outcome": "finished"
+    },
+    "zap_60": {
+     "unconnected": 2,
+     "rule_errors": 32,
+     "shorts": 0,
+     "time_s": 3600,
+     "outcome": "stopped at limit"
+    },
+    "tracemaker": {
+     "unconnected": 57,
+     "rule_errors": 55,
+     "shorts": 0,
+     "time_s": 3601,
+     "outcome": "stopped at limit"
+    },
+    "freerouting": {
+     "unconnected": 0,
+     "rule_errors": 263,
+     "shorts": 1,
+     "time_s": 3618,
+     "outcome": "stopped at limit"
+    },
+    "human": {
+     "unconnected": 0,
+     "rule_errors": 18,
+     "shorts": 0,
+     "time_s": null,
+     "outcome": "reference"
+    }
+   }
+  },
+  {
+   "id": "rapidanalysis_xerxes",
+   "name": "Xerxes",
+   "licence": "Apache-2.0",
+   "source": "https://github.com/rapidanalysis/xerxes",
+   "commit": "43abf5730d092358bc6d10e9faa7233818b5412e",
+   "connections": 314,
+   "pcb": null,
+   "published": {
+    "zap": {
+     "unconnected": 11,
+     "rule_errors": 15,
+     "shorts": 0,
+     "time_s": 526,
+     "outcome": "finished"
+    },
+    "zap_60": {
+     "unconnected": 1,
+     "rule_errors": 15,
+     "shorts": 0,
+     "time_s": 3600,
+     "outcome": "stopped at limit"
+    },
+    "tracemaker": {
+     "unconnected": 27,
+     "rule_errors": 13,
+     "shorts": 0,
+     "time_s": 3601,
+     "outcome": "stopped at limit"
+    },
+    "freerouting": {
+     "unconnected": 0,
+     "rule_errors": 237,
+     "shorts": 0,
+     "time_s": 172,
+     "outcome": "finished"
+    },
+    "human": {
+     "unconnected": 0,
+     "rule_errors": 0,
+     "shorts": 0,
+     "time_s": null,
+     "outcome": "reference"
+    }
+   }
+  }
+ ]
+}

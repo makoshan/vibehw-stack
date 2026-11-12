@@ -1,0 +1,9 @@
+[Design]
+Version=1.0
+HierarchyMode=0
+
+[Document1]
+DocumentPath=%USERPROFILE%\Documents\AltiumScripts\InteractiveHtmlBomForAD\dist\InteractiveHtmlBomForAD.js
+
+[Document2]
+DocumentPath=auto.js

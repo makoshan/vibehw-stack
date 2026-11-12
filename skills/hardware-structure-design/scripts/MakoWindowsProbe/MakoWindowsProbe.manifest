@@ -1,0 +1,12 @@
+{
+  "autodeskProduct": "Fusion360",
+  "type": "script",
+  "id": "cec39ec3-bf21-4d10-88e1-38dc647ad7ca",
+  "author": "Mako",
+  "description": {
+    "": "Independent Windows Fusion modeling probe"
+  },
+  "version": "1.0.0",
+  "supportedOS": "windows",
+  "runOnStartup": false
+}
