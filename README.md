@@ -20,6 +20,9 @@
 ```bash
 git clone https://github.com/makoshan/vibehw-stack.git ~/.local/share/vibehw-stack
 bash ~/.local/share/vibehw-stack/scripts/install.sh
+
+# 可选：同时下载 pcb-reference 开源硬件与立创 C 号参考库（6197 块板 / 34.5 万器件 / 5.6 万带 C 号，压缩包 54 MB）
+bash ~/.local/share/vibehw-stack/scripts/install.sh --with-pcbdb
 ```
 
 脚本会将 `skills/*` 下的 23 个硬件技能软链到 `~/.claude/skills`、`~/.codex/skills` 与 `~/.agents/skills`。
