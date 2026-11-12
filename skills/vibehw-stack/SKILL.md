@@ -1,6 +1,6 @@
 ---
 name: vibehw-stack
-version: 0.3.5
+version: 0.3.6
 description: >-
   Mako 的硬件栈——架在 mstack 之上、专管「一个人 + 一群 AI 代理做出实物」的那一层：从零到实物的七段路、
   每一段派哪个 skill、每一段的门禁是什么，以及硬件特有的四条铁律（实物为准、agent 不碰钱、通电前断电核对、
@@ -12,7 +12,7 @@ description: >-
 
 # vibehw-stack
 
-mstack 管「在 Mako 这里怎么干活」，这层管「怎么把东西做出来」。**唯一真源在 `makoshan/mstack` 的 `skills/vibehw-stack/`**（0.3.0 起），连同下表标「★」的硬件 skill 一起由 mstack `scripts/install.sh` 软链到各 agent 的 skills 目录、每天自动更新；改它们按 mstack §5 走分支 + PR。没标「★」的是上游或自带数据的 skill，留在原处，只在这里点名。
+mstack 管「在 Mako 这里怎么干活」，这层管「怎么把东西做出来」。**唯一真源在 `makoshan/mstack` 的 `skills/vibehw-stack/`**（0.3.0 起），连同下表标「★」的硬件 skill 一起由 mstack `scripts/install.sh` 软链到各 agent 的 skills 目录、每天自动更新；改它们按 mstack §5 走分支 + PR，**改完必须跑 `bash ~/.local/share/mstack/scripts/sync-vibehw.sh --push` 同步到公开仓 `makoshan/vibehw-stack`**（`daily-update.sh` 每天 09:30 也会自动同步）。没标「★」的是上游或自带数据的 skill，留在原处，只在这里点名。
 
 开工顺序：**mstack → vibehw-stack → 当前那一段的 skill**。
 
