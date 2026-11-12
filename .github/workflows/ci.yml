@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  gates:
+    name: Privacy, Lint & Hardware Gate Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Privacy & Forbidden Pattern Gate
+        run: |
+          FORBIDDEN_RE="im""token|consen""labs|凡""亿|去""壳|\\bR""OG\\b|/Users/""thursday|imako""shan|kamo""camp|token""\\.im|\\.ts\\.net|192\\.168\\.|sk-[A-Za-z0-9_-]{15,}|gh[pousr]_[A-Za-z0-9]{15,}"
+          hits=$(grep -rnE --exclude-dir=.git --exclude=ci.yml "$FORBIDDEN_RE" . || true)
+          if [ -n "$hits" ]; then
+            echo "FAIL: Forbidden private/internal pattern detected:"
+            echo "$hits"
+            exit 1
+          fi
+          echo "PASS: 0 forbidden patterns across repository"
+
+      - name: Check No Broad pkill/killall
+        run: bash scripts/check-no-pkill.sh
+
+      - name: Check macOS Bash 3.2 CJK Variable Boundaries
+        run: python3 scripts/check-bash32-cjk.py
+
+      - name: Verify Plugin Manifest Version Alignment
+        run: |
+          python3 - <<'PY'
+          import json, pathlib, re
+          skill = pathlib.Path("skills/vibehw-stack/SKILL.md").read_text()
+          m = re.search(r"^version:\s*(\S+)", skill, re.M)
+          assert m, "Missing version in skills/vibehw-stack/SKILL.md"
+          ver = m.group(1)
+          for p in ("plugin.json", ".cursor-plugin/plugin.json"):
+              d = json.loads(pathlib.Path(p).read_text())
+              assert d["version"] == ver, f"{p} version {d['version']} != {ver}"
+          print(f"PASS: All manifests aligned at v{ver}")
+          PY
+
+      - name: JLCPCB Basic Parts & BOM Rules Tests
+        run: python3 skills/jlc-basic-parts/scripts/test_bom_tools.py
+
+      - name: JLCPCB Gerber/Drill/CPL Fab Facts Tests
+        run: python3 skills/jlc-order/scripts/test_fab_facts.py
+
+      - name: JLCPCB Review Gate & Staging Tests
+        run: |
+          git config --global user.name "CI Runner"
+          git config --global user.email "ci@users.noreply.github.com"
+          python3 skills/jlc-order/scripts/test_review_gate.py

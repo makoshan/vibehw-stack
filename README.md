@@ -1,5 +1,8 @@
 # vibehw-stack
 
+[![CI](https://github.com/makoshan/vibehw-stack/actions/workflows/ci.yml/badge.svg)](https://github.com/makoshan/vibehw-stack/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
+
 我是 [Mako](https://github.com/makoshan)。在 [Lauren Tan 的 `pstack`](https://github.com/cursor/plugins/tree/main/pstack) 把软件工程纪律带进 AI Agent 之后，我遇到了下一个问题：**当 AI 开始画原理图、摆 PCB、选嘉立创料号、导出 Gerber、切 3D 打印外壳时，「代码能跑 / DRC 为 0」距离「实物能点亮、能装进去」还差十万八千里。**
 
 商品图的尺寸不等于卡尺量出来的包络；嘉立创 EDA 报着 3 条 DRC 照样允许导出下单；一颗没锁 C 号的 7.68kΩ 电阻会在贴片匹配页多收你 ¥20 换料费；STEP 水密且两两干涉为 0 的外壳，排线座子朝向反了照样装不进去。
@@ -19,7 +22,7 @@ git clone https://github.com/makoshan/vibehw-stack.git ~/.local/share/vibehw-sta
 bash ~/.local/share/vibehw-stack/scripts/install.sh
 ```
 
-脚本会将 `skills/*` 下的 22 个硬件技能软链到 `~/.claude/skills`、`~/.codex/skills` 与 `~/.agents/skills`。
+脚本会将 `skills/*` 下的 23 个硬件技能软链到 `~/.claude/skills`、`~/.codex/skills` 与 `~/.agents/skills`。
 
 ### Cursor / Claude Code 插件市场安装
 
@@ -54,7 +57,7 @@ bash ~/.local/share/vibehw-stack/scripts/install.sh
 
 ---
 
-## 1. 从零到实物的七段路与 22 个子技能（The Seven Stages）
+## 1. 从零到实物的七段路与 23 个子技能（The Seven Stages）
 
 | 阶段 | 做什么 | 主力 Skill | 门禁（Done 谓词） |
 |---|---|---|---|
@@ -63,7 +66,7 @@ bash ~/.local/share/vibehw-stack/scripts/install.sh
 | **② 原理图、嘉立创选料与 PCB 布线** | 设计时锁死立创基础库 C 号、KiCad/Altium 布局布线、高速与模拟分区 | [`jlc-basic-parts`](./skills/jlc-basic-parts/SKILL.md) · [`pcb-design`](./skills/pcb-design/SKILL.md) · [`pcb-autoroute`](./skills/pcb-autoroute/SKILL.md) · [`pcb-high-speed-layout`](./skills/pcb-high-speed-layout/SKILL.md) · [`altium-mcp`](./skills/altium-mcp/SKILL.md) | `bom_rules.py` 0 错 + `basic_gate.py` / `layout_gate.py` 全绿 |
 | **③ 打板与 SMT 下单门禁** | 独立核对 Gerber/Drill/BOM/CPL 物理事实、出厂审查与面板丝印 | [`jlc-order`](./skills/jlc-order/SKILL.md) · [`panel-artwork`](./skills/panel-artwork/SKILL.md) | `fab_facts.py` + `review_gate.py` 通过 + 放行签字 |
 | **④ 结构、外壳与 3D 打印** | 参数化建模、验证板壳装入路径与限高、FDM/三维猴切片下单 | [`product-structure-design`](./skills/product-structure-design/SKILL.md) · [`hardware-structure-design`](./skills/hardware-structure-design/SKILL.md) · [`pcb-enclosure-fit`](./skills/pcb-enclosure-fit/SKILL.md) · [`mako-cad-fit`](./skills/mako-cad-fit/SKILL.md) · [`ai-cad-pipeline`](./skills/ai-cad-pipeline/SKILL.md) · [`fdm-slicing`](./skills/fdm-slicing/SKILL.md) · [`bambu-x2d-slice`](./skills/bambu-x2d-slice/SKILL.md) · [`jlc-3dp`](./skills/jlc-3dp/SKILL.md) | `step_export_check.py` 通过 + 装入扫掠无碰撞 + 切片可打 |
-| **⑤ 到板检验、标注与尺寸图** | 实拍板卡引脚标注、Apple 风格工程尺寸图 | [`pcb-photo-annotate`](./skills/pcb-photo-annotate/SKILL.md) · [`dimensional-drawing`](./skills/dimensional-drawing/SKILL.md) · [`dimensional-drawing-motion`](./skills/dimensional-drawing-motion/SKILL.md) | 实物万用表通断与供电验收通过 |
+| **⑤ 到板检验、标注、渲染与尺寸图** | 实拍板卡引脚标注、影棚级 3D 渲染、Apple 风格工程尺寸图 | [`pcb-photo-annotate`](./skills/pcb-photo-annotate/SKILL.md) · [`product-render`](./skills/product-render/SKILL.md) · [`dimensional-drawing`](./skills/dimensional-drawing/SKILL.md) · [`dimensional-drawing-motion`](./skills/dimensional-drawing-motion/SKILL.md) | 实物万用表通断与供电验收通过 |
 
 ---
 
