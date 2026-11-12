@@ -1,6 +1,6 @@
 ---
 name: pcb-enclosure-fit
-version: 0.3.0
+version: 0.3.1
 description: >-
   围绕真实 PCB 设计 3D 打印外壳/载具/卡带/底座时的配合法则与流程，叠加在 cad skill
   (text-to-cad, build123d/STEP) 之上使用。来源：OpenClaw 泰山派 RK3566 项目 13 个版本
@@ -163,10 +163,13 @@ build123d 0.13 坑（原力手环 P45，2026-10-27，同一天犯三次）：
 
 ## 配合校验用 fitprobe，不要临时手写
 
-`~/.claude/skills/ai-cad-pipeline/scripts/fitprobe.py` 把本法则里的检查做成了带类型的查询：
+`~/.claude/skills/ai-cad-pipeline/scripts/fitprobe.py`（自检 `test_fitprobe.py`）把本法则里的检查做成了带类型的查询：
 `clash`（干涉量+重叠块 bbox）、`fits`/`envelope`（真元件尺寸的方块能否进、扫可行位）、
 `wall_at`（斜壁/曲面壳在某高度的真实壁位——贴壁特征必须按它定位）、`solids`（一个打印件必须是一个实体）、
-`outside`（肋/柱有没有捅出外表面，同一件内 interfere 查不到）、`sag`（曲面前脸弧垂，平面元件要 < 0.5）。
+`outside`（肋/柱有没有捅出外表面，同一件内 interfere 查不到）、`sag`（曲面前脸弧垂，平面元件要 < 0.5）、
+`plug_sweep`（沿插拔轴把 `PLUG_ENVELOPE` 线缆胶壳从壳外扫到插座面，同时核壳壁开孔四边余量）、
+`slide_path`（预装单元沿滑入轴逐站平移求交，抓终点 `clash==0` 但中途被内肋刮住）、
+`fpc_tail_length`（180° 折弯排线的闭合连续曲线长 vs 标量估算）。
 
 每个查询答不上来会抛错说缺哪个参数，不会静默返回 0——退化布尔返回空集导致探针假阳性，是这条流程上最贵的错误。
 设计来源与完整拆解见 `ai-cad-pipeline/references/adam-plugin-lessons.md`。

@@ -1,6 +1,6 @@
 ---
 name: vibehw-stack
-version: 0.3.6
+version: 0.3.7
 description: >-
   Mako 的硬件栈——架在 mstack 之上、专管「一个人 + 一群 AI 代理做出实物」的那一层：从零到实物的七段路、
   每一段派哪个 skill、每一段的门禁是什么，以及硬件特有的四条铁律（实物为准、agent 不碰钱、通电前断电核对、

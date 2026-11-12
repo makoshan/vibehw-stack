@@ -42,7 +42,10 @@ read/create/update/delete/execute 五个动词，任意脚本只是逃生舱）�
 
 ```python
 import os, sys; sys.path.insert(0, os.path.expanduser("~/.claude/skills/ai-cad-pipeline/scripts"))
-from fitprobe import clash, fits, envelope, wall_at, solids, outside, sag
+from fitprobe import (
+    PLUG_ENVELOPE, clash, fits, envelope, wall_at, solids, outside, sag,
+    plug_sweep, slide_path, fpc_tail_length,
+)
 
 clash(frame, cap, detail=True)        # 干涉量 + 每块重叠的 bbox（只给总量等于让人猜）
 fits([fr, cap, ch], 69, 4, 48, (0, 21.5, 31))   # 真模块尺寸的方块能不能进
@@ -51,6 +54,9 @@ wall_at(body, z=40)                   # 该高度真实半宽/前后面 y ——
 solids(part, "frame")                 # 一个打印件必须是一个实体，否则列出碎块
 outside(part, body)                   # 肋/柱有没有捅出外表面（同一件内，interfere 查不到）
 sag(body, z=34, x_half=34)            # 曲面前脸的弧垂，平屏要 < 0.5
+plug_sweep({"wall": w}, "x", -5, 3.5, (0, 0), "USB-C", (-6.8, 6.8, -4.05, 4.05), 0.2)  # 插头胶壳扫掠+开孔余量
+slide_path(shell, unit, "z", [-12, -8, -4, 0], tol=1.0)  # 预装单元逐站滑入求交
+fpc_tail_length(span=4.0, dz=2.8, bend_r=1.4)            # 180° 折弯排线闭合曲线长
 ```
 
 **铁律**：探针答不上来要抛错说缺什么，绝不返回 0。退化的布尔切片返回空集会让探针「通过」，

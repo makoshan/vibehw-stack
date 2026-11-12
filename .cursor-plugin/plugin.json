@@ -1,7 +1,7 @@
 {
   "name": "vibehw-stack",
   "displayName": "vibehw-stack",
-  "version": "0.3.6",
+  "version": "0.3.7",
   "description": "The agent engineering stack for real hardware (inspired by pstack): from breadboard to schematic, JLCPCB/LCSC basic parts selection, KiCad autoroute & DFM gates, to 3D-printed enclosure fit.",
   "author": {
     "name": "Mako Shan"

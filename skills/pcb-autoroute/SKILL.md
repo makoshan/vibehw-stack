@@ -1,7 +1,7 @@
 ---
 name: pcb-autoroute
 metadata:
-  version: "0.10.2"
+  version: "0.10.3"
 description: >-
   KiCad 板子"不手工布线"的可复现流水线：布局脚本 → Specctra DSN → Freerouting 家族自动布线器 → SES 回导 →
   清残线/加宽电源/铺地 → 原生 DRC → 嘉立创工艺规则复核，每一步留脚本和 JSON 证据。来源：MAKO 手表载板
@@ -144,4 +144,4 @@ C08B 实测（6b547f2、c04311d）：thru3 IMU_SCL 已证实（39 mm、3 孔）�
 
 ## 对外接口脚序与下单门（2026-09-26）
 
-涉及 FPC、板对板、背面模块、电池或跨板排线时，布线前及出制造包前读 [接口配对检查](references/interface-mating-gate.md)。朝向、接触面、编号、信号功能分别核对；DRC 0 与同源网表一致不能证明接对外部实物。未确认的电源/地/插接映射列为下单阻塞，不能用“到货后再试”替代。
+涉及 FPC、板对板、背面模块、电池或跨板排线时，布线前及出制造包前读 [接口配对检查](references/interface-mating-gate.md) 并用 KiCad Python 跑 `scripts/interface_gate.py <board.kicad_pcb> --spec <interfaces.json>`（自检 `--selftest`）。朝向、接触面、编号、信号功能、背靠背单调性分别核对；DRC 0 与同源网表一致不能证明接对外部实物。未确认的电源/地/插接映射列为下单阻塞，不能用“到货后再试”替代。
