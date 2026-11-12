@@ -8,10 +8,12 @@
 """
 import sqlite3, sys, os, textwrap
 
-DEFAULT_DB = os.path.expanduser('~/go/202609/vibe-hw/work/pcbdb/pcb.db')
-DB = os.environ.get('PCBDB') or (
-    DEFAULT_DB if os.path.exists(DEFAULT_DB)
-    else os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'pcb.db'))
+CANDIDATES = [
+    os.path.expanduser('~/.local/share/vibehw-stack/data/pcb.db'),
+    os.path.expanduser('~/go/202609/vibe-hw/work/pcbdb/pcb.db'),
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'pcb.db'),
+]
+DB = os.environ.get('PCBDB') or next((p for p in CANDIDATES if os.path.exists(p)), CANDIDATES[0])
 THIN = 5        # 样本少于这个数的 lift 标为不可信
 EDA = "kicad_version IS 'easyeda-pro'"   # 嘉立创专业版并进来的板（merge_easyeda.py）
 # 用 IS 不用 =：没解析的 KiCad 板 kicad_version 是 NULL，NOT (NULL = …) 还是 NULL，会被悄悄漏掉（实踩：有板仓 1774 算成 1658）
@@ -22,7 +24,7 @@ NOT_DESIGN = "r.full_name NOT LIKE 'KiCad/%'"
 
 def db():
     if not os.path.exists(DB):
-        sys.exit(f'找不到库：{DB}\n设 PCBDB 环境变量指向 pcb.db')
+        sys.exit(f'找不到库：{DB}\n运行 `bash ~/.local/share/vibehw-stack/scripts/install.sh --with-pcbdb` 下载参考库，或设 PCBDB 环境变量指向 pcb.db')
     c = sqlite3.connect(f'file:{DB}?mode=ro', uri=True)
     return c
 
