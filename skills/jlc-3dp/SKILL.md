@@ -1,5 +1,6 @@
 ---
 name: jlc-3dp
+version: 0.1.0
 description: >-
   在嘉立创 3D 打印（www.jlc-3dp.cn，原三维猴 sanweihou.com）下 SLA/树脂等 3D 打印单的实操流程：
   上传 STEP、装配体拆图、选材料与表面处理、读 DFM 告警、拿实时报价，停在提交付款前。来源：MAKO 手表

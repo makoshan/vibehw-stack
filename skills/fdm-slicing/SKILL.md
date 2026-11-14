@@ -1,5 +1,6 @@
 ---
 name: fdm-slicing
+version: 0.1.0
 description: >-
   FDM 切片的决策层：件怎么摆、哪面朝下、支撑放哪、层高墙数怎么定，以及设计阶段就要按切片参数定壁厚。
   打印机无关的原则 + MAKO 手表 39 版（Bambu A1 mini / PETG）积累的具体摆放规则和踩过的坑。

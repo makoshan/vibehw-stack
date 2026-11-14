@@ -33,30 +33,60 @@ jobs:
         run: bash scripts/check-no-pkill.sh
 
       - name: Check macOS Bash 3.2 CJK Variable Boundaries
-        run: python3 scripts/check-bash32-cjk.py
+        run: python3 -B scripts/check-bash32-cjk.py
 
-      - name: Verify Plugin Manifest Version Alignment
+      - name: Verify Manifests, Skill Frontmatter & 23-Skill Routing Parity
         run: |
-          python3 - <<'PY'
+          python3 -B - <<'PY'
           import json, pathlib, re
-          skill = pathlib.Path("skills/vibehw-stack/SKILL.md").read_text()
-          m = re.search(r"^version:\s*(\S+)", skill, re.M)
+          skill_root = pathlib.Path("skills")
+          skill_dirs = {d.name for d in skill_root.iterdir() if d.is_dir() and not d.name.startswith(".")}
+          assert len(skill_dirs) >= 23, f"Expected >=23 skills, got {len(skill_dirs)}"
+
+          top_skill = (skill_root / "vibehw-stack" / "SKILL.md").read_text(encoding="utf-8")
+          m = re.search(r"^version:\s*(\S+)", top_skill, re.M)
           assert m, "Missing version in skills/vibehw-stack/SKILL.md"
           ver = m.group(1)
           for p in ("plugin.json", ".cursor-plugin/plugin.json"):
-              d = json.loads(pathlib.Path(p).read_text())
+              d = json.loads(pathlib.Path(p).read_text(encoding="utf-8"))
               assert d["version"] == ver, f"{p} version {d['version']} != {ver}"
-          print(f"PASS: All manifests aligned at v{ver}")
+
+          for s in sorted(skill_dirs):
+              f = skill_root / s / "SKILL.md"
+              assert f.is_file(), f"Missing SKILL.md in skills/{s}"
+              parts = f.read_text(encoding="utf-8").split("---", 2)
+              assert len(parts) >= 3, f"Missing YAML frontmatter in {f}"
+              fm = parts[1]
+              for key in ("name", "description"):
+                  assert re.search(rf"^{key}:\s*\S*", fm, re.M), f"{f} missing {key}"
+              assert (re.search(r"^version:\s*\S+", fm, re.M) or re.search(r"^\s+version:\s*\S+", fm, re.M)), f"{f} missing version"
+
+          readme = pathlib.Path("README.md").read_text(encoding="utf-8")
+          readme_skills = set(re.findall(r"\(\./skills/([a-z0-9-]+)/SKILL\.md\)", readme))
+          assert readme_skills == skill_dirs, f"README skill links mismatch: diff={skill_dirs ^ readme_skills}"
+
+          missing_in_router = {s for s in skill_dirs if s != "vibehw-stack" and f"`{s}`" not in top_skill}
+          assert not missing_in_router, f"skills/vibehw-stack/SKILL.md missing shipped skills: {sorted(missing_in_router)}"
+          print(f"PASS: All {len(skill_dirs)} skills versioned & aligned across manifests, README, and router at v{ver}")
           PY
 
       - name: JLCPCB Basic Parts & BOM Rules Tests
-        run: python3 skills/jlc-basic-parts/scripts/test_bom_tools.py
+        run: python3 -B skills/jlc-basic-parts/scripts/test_bom_tools.py
 
       - name: JLCPCB Gerber/Drill/CPL Fab Facts Tests
-        run: python3 skills/jlc-order/scripts/test_fab_facts.py
+        run: python3 -B skills/jlc-order/scripts/test_fab_facts.py
 
       - name: JLCPCB Review Gate & Staging Tests
         run: |
           git config --global user.name "CI Runner"
           git config --global user.email "ci@users.noreply.github.com"
-          python3 skills/jlc-order/scripts/test_review_gate.py
+          python3 -B skills/jlc-order/scripts/test_review_gate.py
+
+      - name: Cross-EDA Floorplan & SI Audit Self-Test
+        run: python3 -B skills/pcb-design/scripts/placement/floorplan_si_audit.py --self-test
+
+      - name: PCB Autoroute & Interface Gate Tests
+        run: PYTHONPATH=skills/pcb-autoroute/scripts python3 -B -m unittest discover -s skills/pcb-autoroute/scripts -p 'test_*_gate.py'
+
+      - name: PCB Enclosure Fit & STEP Export Check Tests
+        run: PYTHONPATH=skills/pcb-enclosure-fit/scripts python3 -B -m unittest discover -s skills/pcb-enclosure-fit/scripts -p 'test_*.py'

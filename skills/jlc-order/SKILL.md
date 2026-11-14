@@ -1,6 +1,6 @@
 ---
 name: jlc-order
-version: 0.1.0
+version: 0.1.1
 description: >-
   在嘉立创（jlc.com / jlc-smt.com）下 PCB 打样单 + 经济型 SMT 贴片单的实操流程：先算价、出制造包、
   网页下单、随单传 Gerber、进 SMT 传 BOM/坐标做匹配，停在付款前。来源：MAKO 手表载板 v0.16 第一次真实下单
@@ -43,7 +43,9 @@ description: >-
 - 机器自检：Gerber job 8 层；PTH 孔数 = 过孔数 + 通孔焊盘数；pos 行数 = SMT 实装数；BOM 里焊线盘/模块/马达孔标 `not-smt`，DNP 标 DNP。
 - **BOM 的 Footprint 列写嘉立创的封装名**（0603 / 0805 / SOT-23-5 / TSSOP-20 / SC-70-6 / SMA(DO-214AC) / "SMD,P=0.5mm,卧贴"），不要写 KiCad 封装名，否则每行都弹"BOM填写的封装与选用不符"温馨提示（`export_fab.sh` 里有映射表）。
 - 匹配页每行最左的勾是"核对"，全选框勾掉没有 ⚠ 的行；带 ⚠ 的行（例：CAT4002 被当成 LED 提示"需要确认颜色"）看过提示后直接点那一行的勾也能勾上。全带 C 号时 17/17 一次过，没有任何封装/参数提示。勾完点"存档当前操作"，停在"备料完成，下一步"前。
-- SMT 文件另出两份：`jlc_smt_bom.csv`（列 `Comment,Designator,Footprint,Quantity`，同料号合并成一行、位号逗号连）和 `jlc_smt_cpl.csv`（列 `Designator,Mid X,Mid Y,Layer,Rotation`，坐标带 `mm` 后缀，**Y 直接用 KiCad pos 导出的值，不要取反**——它和 Gerber 同一坐标系）。
+- SMT 文件另出两份：`jlc_smt_bom.csv`（列 `Comment,Designator,Footprint,Quantity`，同料号合并成一行、位号逗号连）和 `jlc_smt_cpl.csv`（列 `Designator,Mid X,Mid Y,Layer,Rotation`，坐标带 `mm` 后缀，**Y 直接用 KiCad pos 导出的值，不要取反**——它和 Gerber 同一坐标系）。CSV 进带 `SHA256SUMS` 的仓库时，`.gitattributes` 标 `*.csv -text` 并用 `open(..., newline="")` 显式写 `\r\n`，防 Git 换行符过滤器破坏哈希。
+- **嘉立创 EDA 专业版导 CPL 传「AD/其他」默认模式时，背面（Bottom）旋转角差 180°。** 情形：从嘉立创专业版 `.epcb2` 内部 `COMPONENT` 记录自写 CPL，或混用导出文件，在嘉立创 SMT 上传页选默认的「`AD,99SE,Allegro,PADS(宏)等其他`」。规则：嘉立创默认 AD 模式对 Bottom 件按**绕 X 轴镜像再旋转**放置，而嘉立创专业版 `.epcb2` 内部坐标按**绕 Y 轴镜像再旋转**定义，两者在全部背面元件上恒差 **`+180° (mod 360)`**；选默认 AD 模式上传自导 CPL 时，所有 Bottom 件角度必须统一 `+180° (mod 360)`，随后把每颗多脚件焊盘变换后逐一对最终 Gerber 铜皮做最小二乘拟合（`max_err < 0.01 mm`），并随包生成标有 1 脚圆点的 `polarity-top.png` / `polarity-bottom.png` 供人工核极性。证据：2026-11-14 双面贴主控板（背面 68 颗）与采集板（背面 50 颗）校核自导 CPL 时，查明未补 180° 会令默认 AD 模式下背面元件全部反向（草稿单 Y37 预警；底层 `FPC3` 反贴 180° 反例焊盘错位达 `16.689 mm`），统一补 `+180°` 后双板 118 颗背面件对 Gerber 铜皮逐脚拟合残差 `< 0.001 mm`（提交 `e172fd41`、`8bc1855d`、`09511894`）。置信：高（解析两套镜像矩阵并经平台 2D 预览与双板铜皮拟合证实）。
+- **小于 `70×70 mm` 的双面贴板自做 `70.2×70.2 mm` 邮票孔/铣槽拼板框时，连接筋避开板边座子且非外框层逐字节守恒。** 情形：双面贴小板不足嘉立创经济/标准治具最小尺寸，需外加 `70.20×70.20 mm`、`2.0 mm` 铣槽工艺边拼板 Gerber。规则：连接筋（tab）位置对全部板边连接器开口、沉板槽与悬挑器件做区间避让断言；除 `Gerber_BoardOutlineLayer.GKO` 外，其余全部铜层、阻焊、锡膏与钻孔文件必须与已审单板包逐字节（SHA-256）一致。证据：2026-11-14 `43.10×36.50 mm` 双面主控板与采集板两套 `70.20×70.20 mm` 拼板包，四边连接筋避开沉板口、按键与南北两颗 30P 座，非 `GKO` 层哈希与单板包 100% 相同（提交 `ca63836d`、`d2b5c9e4`）。置信：低（双板几何与哈希守恒已验，拼板审单与分板手感待到板实测）。
 
 通用版（不依赖手表项目脚本）：vibe-hw `agents/jlc.mjs` 的 `runJlc(dir)` 用 `kicad-cli pcb export pos --smd-only` + `sch export bom --fields …,LCSC` 直接出 `jlc/jlc_smt_bom.csv` 和 `jlc_smt_cpl.csv`；任一贴片位号没 C 号就判 block 并列出位号（b-parasite 真板 20 个贴装缺 8 个，这是常态）。`npm run test:jlc`。
 
@@ -90,7 +92,7 @@ description: >-
 提交完别看结算抽屉，去订单里看服务端存下来的值：
 1. **SMT 订单详情**（SMT 订单列表 → 该行「订单详情」）：费用明细里要有「极性费 ¥10」「确认DFM服务费 ¥3」，基本信息「订单备注」要是「人工确认极性」。如果是「嘉立创封装库」，说明极性存成了第 1 项（按嘉立创EDA库）。2026-09-26 根因：用 JS `label.click()` 选第 3 项，抽屉里单选框和总价（¥157.02）都变了，但提交上去的仍是默认值（订单 ¥147.02、备注"嘉立创封装库"）；换成 CDP 真实点击 radio 后才对。修法：该行「修改元件 → 开始修改」（原 SMT 单自动取消、库存保留 1 小时）→ 回匹配页「备料完成」→ 真实点击选极性 → 提交。**规则：影响钱和生产的选项一律真实点击，JS 点击只用来点不影响订单内容的按钮。**
 2. **SMT 页面右侧预览要有板子**（绿色 PCB 上摆着器件），不能只有一堆浮空器件。只有器件时，接口 `POST /api/smtOrder/smtBomResultView/v1/getWebFileSuccess` 会返回「PCB源文件中未检测到有效的gerber文件（注：不影响SMT下单）」。这个结果**跟着 PCB 单走**（换别的 `advanceOrderAccessId` 结果不变），所以是嘉立创对那一单 PCB 的 Gerber 解析没出结果，不是 SMT 这边的问题。2026-09-26 Y13：zip 和上一单成功的 Y12 逐文件同名、Gerber 指令集一致，排除了文件本身。修法：PCB 订单 →「更多操作 → ①重新上传文件下单」，传同一个 zip → 生成新单号（Y14），旧单自动取消（未付款无损失），**等新单审核通过后**再从新单「去下SMT订单」，预览就有板子了。为什么 Y13 没解析出来仍不知道：Y13 是 18 秒「系统自动审核」、进 SMT 时审核还没过，Y14 是 3 分钟人工审核、审核后才进 SMT。所以稳妥的顺序是**PCB 审核通过后再下 SMT**，不走「不等审核结果」。订单详情里的「暂无实物仿真图」不能当判断依据：Y14 解析成功后也这么显示，要以 SMT 预览或上面那个接口为准。
-3. **PCB 订单详情对文件实测值**：上传前对要传的 zip 跑 `scripts/fab_facts.py <zip> --bom jlc_smt_bom.csv --cpl jlc_smt_cpl.csv --out fab_facts.json`（从 Gerber/钻孔本身量铜层数、外形包络、最小镀铜孔、镀铜/非镀铜孔数、槽孔数、正反钢网焊盘数，并列出 BOM/CPL 对不上的位号；有问题退出 1）。提交后订单详情里的**层数、尺寸、最小孔、孔数逐项对这张表**，不对就停下查是填错还是传错文件；**板厚、颜色、表面处理、铜厚这类文件里没有的，照下单选项核**。尺寸是板框中心线包络，拼板单要对拼板 zip 量出来的数。嘉立创EDA 的 `PTH_Through.DRL` 已含 `PTH_Through_Via.DRL` 的过孔，脚本按坐标去重，表里有「跨文件重复孔」一行。做法借自 Backplane `order/fabsrv/analysis.py`；自检 `scripts/test_fab_facts.py`。2026-11-10 阳性对照：D20N 包与 pcbnew 实量逐项相同（4 层、43.10×36.50、0.300、镀铜孔 266、钢网 305/222）；嘉立创EDA 主控 R4U3 包 4 层、43.10×36.50、0.300、BOM 46 行 110 位号 = CPL 110，与 README 相同。
+3. **PCB 订单详情对文件实测值**：上传前对要传的 zip 跑 `scripts/fab_facts.py <zip> --bom jlc_smt_bom.csv --cpl jlc_smt_cpl.csv --out fab_facts.json`（从 Gerber/钻孔本身量铜层数、外形包络、最小镀铜孔、镀铜/非镀铜孔数、槽孔数、正反钢网焊盘数，并列出 BOM/CPL 对不上的位号；有问题退出 1），并核最终 `GTP/GBP` 钢网层在全部 DNP / 手焊排针焊盘处为 `0` 开窗、未塞孔散热焊盘为分块网格开窗、贴片铜皮与镀铜钻孔圆无意外相交（见 `pcb-design` 阶段 8）。提交后订单详情里的**层数、尺寸、最小孔、孔数逐项对这张表**，不对就停下查是填错还是传错文件；**板厚、颜色、表面处理、铜厚这类文件里没有的，照下单选项核**。尺寸是板框中心线包络，拼板单要对拼板 zip 量出来的数。嘉立创EDA 的 `PTH_Through.DRL` 已含 `PTH_Through_Via.DRL` 的过孔，脚本按坐标去重，表里有「跨文件重复孔」一行。做法借自 Backplane `order/fabsrv/analysis.py`；自检 `scripts/test_fab_facts.py`。2026-11-10 阳性对照：D20N 包与 pcbnew 实量逐项相同（4 层、43.10×36.50、0.300、镀铜孔 266、钢网 305/222）；嘉立创EDA 主控 R4U3 包 4 层、43.10×36.50、0.300、BOM 46 行 110 位号 = CPL 110，与 README 相同。
 
 ## 4b. 取消重下（改版后换文件）
 

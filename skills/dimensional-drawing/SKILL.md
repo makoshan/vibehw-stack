@@ -1,5 +1,6 @@
 ---
 name: dimensional-drawing
+version: 0.1.0
 description: Make an Apple-style monochrome dimensional drawing of a UI component or physical product — title-block summary plus one dense drawing sheet with variable-based dimensions. Use when asked for an anatomy, spec sheet, redline or dimensional drawing of a component.
 ---
 

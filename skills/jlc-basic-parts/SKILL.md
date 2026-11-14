@@ -1,5 +1,6 @@
 ---
 name: jlc-basic-parts
+version: 0.1.0
 description: >-
   设计阶段就按嘉立创 SMT 库选料：每个贴片件在原理图/design.json 里带 LCSC C 号，优先基础库（免换料费）、
   扩展库每种 ¥20、库外不选。含查库方法（jlc-smt.com/lcsc/basic、匹配页替换搜索、立创商城）、

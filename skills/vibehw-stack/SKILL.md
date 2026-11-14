@@ -1,6 +1,6 @@
 ---
 name: vibehw-stack
-version: 0.3.7
+version: 0.3.8
 description: >-
   Mako 的硬件栈——架在 mstack 之上、专管「一个人 + 一群 AI 代理做出实物」的那一层：从零到实物的七段路、
   每一段派哪个 skill、每一段的门禁是什么，以及硬件特有的四条铁律（实物为准、agent 不碰钱、通电前断电核对、
@@ -37,11 +37,11 @@ mstack 管「在 Mako 这里怎么干活」，这层管「怎么把东西做出�
 
 | 段 | 这一段在做什么 | 主力 skill | **门禁（过了才进下一段）** |
 |---|---|---|---|
-| ① 拆解功能并验证 | 用开发板 + 面包板把需求跑出来 | `vibe-hardware-idea`（查料）· ★`schematik`（找参考接线/模块摘要）· ★`pcb-reference`（开源真板怎么接、选什么料）· `taobao-shopping`（买件）· `investigate`（查故障）· `embedded-ui`（上屏） | 真机上跑通，不是编译通过 |
+| ① 拆解功能并验证 | 用开发板 + 面包板把需求跑出来 | `vibe-hardware-idea`（查料）· ★`schematik`（找参考接线/模块摘要）· ★`pcb-reference`（开源真板怎么接、选什么料）· ★`fcc-teardown`（查量产竞品 FCC 内部拆机照与芯片方案）· `taobao-shopping`（买件）· `investigate`（查故障）· `embedded-ui`（上屏） | 真机上跑通，不是编译通过 |
 | ② 制作初期 PCB | 把开发板和模块整合成一块板 | ★`pcb-design`（需求 → 原理图 → 布局 → 打板 → 首板调试，全程的设计纪律）· ★`pcb-high-speed-layout`（高速接口、叠层、时序与回流，按需）· ★`jlc-basic-parts`（选料带 C 号）→ ★`pcb-autoroute`（KiCad 跑到 DRC 0）→ `huaqiu-eda-review`（BOM/ERC/出厂闸）→ ★`jlc-order`（下单）。换工具：★`altium-mcp`（Altium 经 ssh）· `easyeda-api` / `easyeda-eprj3` / `easyeda-pro-format-skill`（嘉立创 EDA） | `ROUTING_ONLY_PASS` **加上**放行审核签字。只有前者是「线连上了」 |
 | ③ 设计外观及交互 | 定外观和人机交互 | ★`product-structure-design`（肌电手环结构：分件、卡扣、电极、表带）· ★`hardware-structure-design`（照片/实测 → 参数化零件与装配）· ★`ai-cad-pipeline`（参考图 → STEP+3MF）· `cad`（生成）· `cad-viewer`（审阅）· `step-parts`（买得到的标准件 STEP）· ★`mako-cad-fit`（按实物反馈迭代）· ★`pcb-enclosure-fit`（贴着板子的配合） | 装入路径、线束、接口路径都验过——不是只验体积不干涉 |
 | ④ 制作实体并验证 | 确定所有部件的可行性 | `dfam-check`（网格可打印性）· ★`fdm-slicing`（怎么摆怎么打）→ ★`bambu-x2d-slice` / `gcode` / `bambu-labs`（自己打）或 ★`jlc-3dp`（外发树脂）· ★`panel-artwork`（面板）· `sendcutsend` / `dxf`（切割件） | 试片配合过、实装过，不是切片器没报错 |
-| ⑤ 整合内外软硬件 | 组合内外，成品 | ★`pcb-photo-annotate`（实物照片标焊盘、判正反面与朝向）· ★`product-render`（板子/整机宣传渲染图）· `handoff`（跨会话）· `codex`（第二意见）· mstack 的车道 | 四态里没有「已实现未验收」压着 |
+| ⑤ 整合内外软硬件 | 组合内外，成品 | ★`pcb-photo-annotate`（实物照片标焊盘、判正反面与朝向）· ★`product-render`（板子/整机宣传渲染图）· ★`dimensional-drawing` / ★`dimensional-drawing-motion`（单页工程尺寸图与展开动效）· `handoff`（跨会话）· `codex`（第二意见）· mstack 的车道 | 四态里没有「已实现未验收」压着 |
 | ⑥ 宣发 | 讲出去 | `paper-grade-deck` · `pptx` | 「已经是真的 / 还不是真的」两列都写，且不删 |
 | ⑦ 小批量制造 | 放量 | ★`jlc-order` · ★`jlc-basic-parts` | 第一批实物验收过 |
 
@@ -92,8 +92,10 @@ mstack 第 1 节的通用条目不重抄，这里只列硬件特有的：
 | | 布线 / DRC / 自定义规则 / Freerouting / 改板重建 | `pcb-autoroute` |
 | | Altium / eda-agent MCP（Mac 经 ssh） | `altium-mcp` |
 | | 开源参考板与选料依据 | `pcb-reference` |
+| | 模块参考接线摘要 / 竞品 FCC 备案拆机图考证 | `schematik` / `fcc-teardown` |
 | | 实物照片对设计坐标：正反面、朝向、焊盘标注 | `pcb-photo-annotate` |
 | | 板子/整机宣传渲染图（材质、影棚、pcb2blender） | `product-render` |
+| | 单页工程尺寸标注图与展开动画 | `dimensional-drawing` / `dimensional-drawing-motion` |
 | | PCB/SMT 下单页面与文件 | `jlc-order` |
 | | 树脂外发 / 材料与报价 | `jlc-3dp` |
 | | 外壳贴着 PCB 的配合、测点与插头能不能够到、Web3D 装配 GLB 轻量化与关节注入 | `pcb-enclosure-fit` |

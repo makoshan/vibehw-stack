@@ -1,5 +1,6 @@
 ---
 name: dimensional-drawing-motion
+version: 0.1.0
 description: Turn a finished dimensional drawing sheet into a ~10 s Apple-style motion film — lines draw themselves in, the camera pulls back, layers lift into an exploded view, the full sheet resolves. Use after the dimensional-drawing skill, or when asked to animate a spec sheet or anatomy drawing.
 ---
 

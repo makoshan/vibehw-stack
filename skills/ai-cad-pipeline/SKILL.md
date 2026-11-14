@@ -1,5 +1,6 @@
 ---
 name: ai-cad-pipeline
+version: 0.1.0
 description: |
   从参考图/渲染稿到可打印 STEP+3MF 套件的完整 AI CAD 流水线（硬件外壳、桌面机器人壳、PCB 盒）：
   尺寸源分级 → 让 AI 出带尺寸的正交参考图（Codex/genimg）→ 母曲面选路（Fusion MCP 变半径圆角+抽壳 vs build123d/OCC）

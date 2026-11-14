@@ -7,9 +7,9 @@
 
 商品图的尺寸不等于卡尺量出来的包络；嘉立创 EDA 报着 3 条 DRC 照样允许导出下单；一颗没锁 C 号的 7.68kΩ 电阻会在贴片匹配页多收你 ¥20 换料费；STEP 水密且两两干涉为 0 的外壳，排线座子朝向反了照样装不进去。
 
-**`vibehw-stack` 是我的答案。** 这套技能诞生于我一个人 + 一群 AI Agent（Claude Code / Codex / Cursor）从零做出智能手表与 8 通道肌电手环（OpenEMG）的实战：39 版 3D 打印外壳、16 版载板与高密度采集板、真实嘉立创 PCB+SMT 打样与三维猴树脂外发。
+**`vibehw-stack` 是我的答案。** 这套技能诞生于我一个人 + 一群 AI Agent（Claude Code / Codex / Cursor）从零做出智能手表与 2 / 8 / 16 通道肌电手环（OpenEMG）的实战：39 版 3D 打印外壳、多代载板与双面 4/6 层高密度采集/主控板、真实嘉立创 PCB+SMT 打样与三维猴树脂外发。
 
-它不教 AI 空谈电子学，而是把**从想法到实物的七段路**、每一段的**硬门禁（Done 谓词）**、以及**嘉立创生态（LCSC 基础库选料、Gerber/BOM/CPL 物理事实核查、KiCad 自动布线、外壳装入路径检验）**写死成可执行的脚本与 Skill。
+它不教 AI 空谈电子学，而是把**从想法到实物的七段路**、每一段的**硬门禁（Done 谓词）**、以及**嘉立创生态（LCSC 基础库选料、Gerber/BOM/CPL 物理事实与背面镜像核查、KiCad 与嘉立创 EDA 专业版 `.epro/.epro2` 双栈审查、外壳装入与翻盖动态包络检验）**写死成可执行的脚本与 Skill。
 
 ---
 
@@ -66,9 +66,9 @@ bash ~/.local/share/vibehw-stack/scripts/install.sh --with-pcbdb
 |---|---|---|---|
 | **0. 总控路由** | 判断当前阶段、派发子技能、守住四条铁律 | [`vibehw-stack`](./skills/vibehw-stack/SKILL.md) | 阶段门禁通过 + 证据落盘 |
 | **① 拆解与参考选型** | 查真实开源板怎么接、芯片常配什么外围与立创 C 号 | [`pcb-reference`](./skills/pcb-reference/SKILL.md) · [`schematik`](./skills/schematik/SKILL.md) · [`fcc-teardown`](./skills/fcc-teardown/SKILL.md) | 拿到原厂 Datasheet 与真板接法，真机/开发板跑通 |
-| **② 原理图、嘉立创选料与 PCB 布线** | 设计时锁死立创基础库 C 号、KiCad/Altium 布局布线、高速与模拟分区 | [`jlc-basic-parts`](./skills/jlc-basic-parts/SKILL.md) · [`pcb-design`](./skills/pcb-design/SKILL.md) · [`pcb-autoroute`](./skills/pcb-autoroute/SKILL.md) · [`pcb-high-speed-layout`](./skills/pcb-high-speed-layout/SKILL.md) · [`altium-mcp`](./skills/altium-mcp/SKILL.md) | `bom_rules.py` 0 错 + `basic_gate.py` / `layout_gate.py` 全绿 |
-| **③ 打板与 SMT 下单门禁** | 独立核对 Gerber/Drill/BOM/CPL 物理事实、出厂审查与面板丝印 | [`jlc-order`](./skills/jlc-order/SKILL.md) · [`panel-artwork`](./skills/panel-artwork/SKILL.md) | `fab_facts.py` + `review_gate.py` 通过 + 放行签字 |
-| **④ 结构、外壳与 3D 打印** | 参数化建模、验证板壳装入路径与限高、FDM/三维猴切片下单 | [`product-structure-design`](./skills/product-structure-design/SKILL.md) · [`hardware-structure-design`](./skills/hardware-structure-design/SKILL.md) · [`pcb-enclosure-fit`](./skills/pcb-enclosure-fit/SKILL.md) · [`mako-cad-fit`](./skills/mako-cad-fit/SKILL.md) · [`ai-cad-pipeline`](./skills/ai-cad-pipeline/SKILL.md) · [`fdm-slicing`](./skills/fdm-slicing/SKILL.md) · [`bambu-x2d-slice`](./skills/bambu-x2d-slice/SKILL.md) · [`jlc-3dp`](./skills/jlc-3dp/SKILL.md) | `step_export_check.py` 通过 + 装入扫掠无碰撞 + 切片可打 |
+| **② 原理图、嘉立创选料与 PCB 布线** | 设计时锁死立创基础库 C 号、KiCad/嘉立创/Altium 布局布线、高速与模拟分区 | [`jlc-basic-parts`](./skills/jlc-basic-parts/SKILL.md) · [`pcb-design`](./skills/pcb-design/SKILL.md) · [`pcb-autoroute`](./skills/pcb-autoroute/SKILL.md) · [`pcb-high-speed-layout`](./skills/pcb-high-speed-layout/SKILL.md) · [`altium-mcp`](./skills/altium-mcp/SKILL.md) | `bom_rules.py` 0 错 + `floorplan_si_audit.py` / `basic_gate.py` / `layout_gate.py` 全绿 |
+| **③ 打板与 SMT 下单门禁** | 独立核对 Gerber/Drill/BOM/CPL 物理事实、背面旋转约定、钢网开窗与面板丝印 | [`jlc-order`](./skills/jlc-order/SKILL.md) · [`panel-artwork`](./skills/panel-artwork/SKILL.md) | `fab_facts.py` + `review_gate.py` 通过 + 放行签字 |
+| **④ 结构、外壳与 3D 打印** | 参数化建模、验证板壳装入路径/连接器动态包络与限高、FDM/三维猴切片下单 | [`product-structure-design`](./skills/product-structure-design/SKILL.md) · [`hardware-structure-design`](./skills/hardware-structure-design/SKILL.md) · [`pcb-enclosure-fit`](./skills/pcb-enclosure-fit/SKILL.md) · [`mako-cad-fit`](./skills/mako-cad-fit/SKILL.md) · [`ai-cad-pipeline`](./skills/ai-cad-pipeline/SKILL.md) · [`fdm-slicing`](./skills/fdm-slicing/SKILL.md) · [`bambu-x2d-slice`](./skills/bambu-x2d-slice/SKILL.md) · [`jlc-3dp`](./skills/jlc-3dp/SKILL.md) | `step_export_check.py` + `interface_gate.py` + `fitprobe.py` 通过 + 切片配合窗 0 支撑 |
 | **⑤ 到板检验、标注、渲染与尺寸图** | 实拍板卡引脚标注、影棚级 3D 渲染、Apple 风格工程尺寸图 | [`pcb-photo-annotate`](./skills/pcb-photo-annotate/SKILL.md) · [`product-render`](./skills/product-render/SKILL.md) · [`dimensional-drawing`](./skills/dimensional-drawing/SKILL.md) · [`dimensional-drawing-motion`](./skills/dimensional-drawing-motion/SKILL.md) | 实物万用表通断与供电验收通过 |
 
 ---
@@ -82,6 +82,9 @@ bash ~/.local/share/vibehw-stack/scripts/install.sh --with-pcbdb
    - 自带 [`fab_facts.py`](./skills/jlc-order/scripts/fab_facts.py) 与 [`review_gate.py`](./skills/jlc-order/scripts/review_gate.py)：从导出的制造包直接反读板框尺寸、层数、最小孔径、内层孤铜、封装 courtyard 间距，并绑定 Git commit hash 防篡改。
 3. **[`pcb-reference`](./skills/pcb-reference/SKILL.md)（6,197 块开源真板 + 5.6 万立创 C 号共现查询）**
    - 自带只读查询器 [`query.py`](./skills/pcb-reference/scripts/query.py)：按芯片型号查开源真板最常搭配的外围阻容、封装与作者实选的立创 C 号（按 `lift` 去重排序）。
+4. **跨 `.epro2` / `.kicad_pcb` 架构预审与「装得进、接得上」门禁**
+   - [`floorplan_si_audit.py`](./skills/pcb-design/scripts/placement/floorplan_si_audit.py)：跨嘉立创 `.epro2/.epcb2` 与 KiCad `.kicad_pcb` 检查多脚芯片顶底同坐标硬叠、射频馈线超长/打孔、USB 差分偏斜与手绘板框微斜边。
+   - [`interface_gate.py`](./skills/pcb-autoroute/scripts/interface_gate.py) 与 [`fitprobe.py`](./skills/ai-cad-pipeline/scripts/fitprobe.py)：声明式核查连接器开口朝向、三维翻转脚序、插头胶壳扫掠、滑入路径与浮动件限位。
 
 ---
 
@@ -106,10 +109,13 @@ bash ~/.local/share/vibehw-stack/scripts/install.sh --with-pcbdb
 
 ```bash
 bash scripts/check-no-pkill.sh
-python3 scripts/check-bash32-cjk.py
-python3 skills/jlc-basic-parts/scripts/test_bom_tools.py
-python3 skills/jlc-order/scripts/test_fab_facts.py
-python3 skills/jlc-order/scripts/test_review_gate.py
+python3 -B scripts/check-bash32-cjk.py
+python3 -B skills/jlc-basic-parts/scripts/test_bom_tools.py
+python3 -B skills/jlc-order/scripts/test_fab_facts.py
+python3 -B skills/jlc-order/scripts/test_review_gate.py
+python3 -B skills/pcb-design/scripts/placement/floorplan_si_audit.py --self-test
+PYTHONPATH=skills/pcb-autoroute/scripts python3 -B -m unittest discover -s skills/pcb-autoroute/scripts -p 'test_*_gate.py'
+PYTHONPATH=skills/pcb-enclosure-fit/scripts python3 -B -m unittest discover -s skills/pcb-enclosure-fit/scripts -p 'test_*.py'
 ```
 
 ---
