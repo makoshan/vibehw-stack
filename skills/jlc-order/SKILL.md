@@ -1,6 +1,6 @@
 ---
 name: jlc-order
-version: 0.1.1
+version: 0.1.2
 description: >-
   在嘉立创（jlc.com / jlc-smt.com）下 PCB 打样单 + 经济型 SMT 贴片单的实操流程：先算价、出制造包、
   网页下单、随单传 Gerber、进 SMT 传 BOM/坐标做匹配，停在付款前。来源：MAKO 手表载板 v0.16 第一次真实下单
