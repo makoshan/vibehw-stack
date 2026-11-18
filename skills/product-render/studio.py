@@ -1,16 +1,62 @@
-"""Blender 无界面产品影棚：导入一个或多个模型，搭参考图式影棚，用 Cycles 出俯视 + 斜视两张。
+"""Blender 无界面产品影棚：用同一场景出俯视、斜视和可选的接口特写。
 
-输入：.pcb3d（pcb2blender）、.glb/.gltf、.stl、.obj。多个输入按顺序沿 X 平铺（分解平铺图）。
+输入：.pcb3d（pcb2blender）、.glb/.gltf、.stl、.obj。支持平铺与保留装配坐标。
 用法：
   blender -b --factory-startup --python-exit-code 1 --python studio.py -- \
       [--bg dark|light] [--samples 128] [--scale 100] [--expo 1.0] [--name out] <out_dir> <模型>...
-出图：<out_dir>/<name>-top-<bg>.png、<name>-iso-<bg>.png；过曝或出画即报错退出。
+出图：<out_dir>/<name>-<视角>-<bg>.png。
 """
 import argparse, math, os, re, sys
 from pathlib import Path
 
+
+def millimetres(value):
+    try:
+        xyz = tuple(float(n) for n in value.split(','))
+    except ValueError:
+        xyz = ()
+    if len(xyz) != 3 or not all(math.isfinite(n) for n in xyz):
+        raise argparse.ArgumentTypeError('需要三个毫米坐标 X,Y,Z')
+    return xyz
+
+
+def positive(value):
+    num = float(value)
+    if not math.isfinite(num) or num <= 0:
+        raise argparse.ArgumentTypeError('需要有限正数')
+    return num
+
+
+def camera_views(value):
+    views = value.split(',')
+    if any(view not in ('top', 'iso', 'detail') for view in views):
+        raise argparse.ArgumentTypeError('视角用逗号分隔，可选 top,iso,detail')
+    return tuple(dict.fromkeys(views))
+
+
+def elevation(value):
+    angle = positive(value)
+    if angle >= 90:
+        raise argparse.ArgumentTypeError('仰角要小于 90°，垂直俯拍用 top')
+    return angle
+
+
 ap = argparse.ArgumentParser()
 ap.add_argument('--bg', choices=['dark', 'light'], default='dark')
+ap.add_argument('--layout', choices=['spread', 'assembled'], default='spread',
+                help='平铺；或保留输入间的共同装配坐标，仅统一落地')
+ap.add_argument('--spread-gap-mm', type=positive, help='平铺时的等距留白，单位 mm')
+ap.add_argument('--no-tray', action='store_true', help='黑底不生成托盘，适合模型自带底座')
+ap.add_argument('--views', type=camera_views, default='top,iso', help='用逗号分隔 top,iso,detail')
+ap.add_argument('--detail-target-mm', type=millimetres,
+                help='落地后 Blender 世界坐标 X,Y,Z，单位 mm')
+ap.add_argument('--detail-width-mm', type=positive, default=18,
+                help='特写在对焦平面上的横向宽度，单位 mm')
+ap.add_argument('--detail-fstop', type=positive, default=14, help='特写光圈，数值越大景深越深')
+ap.add_argument('--detail-azimuth', type=float, default=-120, help='从 +X 向 +Y 的方位角，单位度')
+ap.add_argument('--detail-elevation', type=elevation, default=49, help='从水平面向上的仰角，单位度')
+ap.add_argument('--width', type=int, default=2400)
+ap.add_argument('--height', type=int, default=1350)
 ap.add_argument('--samples', type=int, default=128)
 ap.add_argument('--scale', type=int, default=100)
 ap.add_argument('--expo', type=float, default=1.0, help='整体照度倍率')
@@ -28,6 +74,15 @@ ap.add_argument('--name', default='product')
 ap.add_argument('out_dir', type=Path)
 ap.add_argument('inputs', type=Path, nargs='+')
 a = ap.parse_args(sys.argv[sys.argv.index('--') + 1:])
+if 'detail' in a.views and a.detail_target_mm is None:
+    ap.error('detail 视角需要 --detail-target-mm=X,Y,Z')
+if not math.isfinite(a.detail_azimuth):
+    ap.error('特写方位角必须为有限数值')
+if a.spread_gap_mm is not None and a.layout != 'spread':
+    ap.error('--spread-gap-mm 只适用于 spread')
+if min(a.width, a.height, a.samples) < 1 or not 1 <= a.scale <= 100:
+    ap.error('宽、高、采样数必须为正整数，缩放比例须为 1–100')
+a.out_dir = a.out_dir.resolve()
 a.out_dir.mkdir(parents=True, exist_ok=True)
 a.gold = a.gold or ('c8964a' if a.bg == 'dark' else 'e89a10')
 a.tray = tuple(map(float, a.tray.split(',')))
@@ -52,7 +107,8 @@ def import_one(path: Path):
             sys.path[:0] = [str(CACHE / 'deps'), str(CACHE / 'pcb2blender')]
             import pcb2blender_importer
             pcb2blender_importer.register()
-        r = bpy.ops.pcb2blender.import_pcb3d(filepath=str(path), add_solder_joints='SMART', texture_dpi=2032.0)
+        r = bpy.ops.pcb2blender.import_pcb3d(filepath=str(path), add_solder_joints='SMART', texture_dpi=2032.0,
+                                            center_boards=a.layout == 'spread')
     elif ext in ('.glb', '.gltf'):
         r = bpy.ops.import_scene.gltf(filepath=str(path))
     elif ext == '.stl':
@@ -72,23 +128,35 @@ def bbox(objs):
     return lo, hi
 
 
-# 逐个导入，沿 X 排开、底面落到 z=0
+# 平铺时逐件落地。装配模式保留部件相对位姿，全部导入后一起落地。
 cursor, content = 0.0, []
 for p in a.inputs:
     before = set(bpy.data.objects)
-    import_one(p)
+    import_one(p.resolve())
     new = [o for o in bpy.data.objects if o not in before]
     bpy.context.view_layer.update()
     lo, hi = bbox(new)
-    gap = 0.15 * max(hi - lo)
-    off = Vector((cursor - lo.x + (gap if content else 0), -(lo.y + hi.y) / 2, -lo.z))
     for o in new:
-        if o.parent not in new:
-            o.location += off
-    bpy.context.view_layer.update()
-    cursor = bbox(new)[1].x
+        if o.type == 'LIGHT':
+            o.hide_render = True
+    if a.layout == 'spread':
+        gap = 0
+        if content:
+            gap = a.spread_gap_mm / 1000 if a.spread_gap_mm is not None else 0.15 * max(hi - lo)
+        off = Vector((cursor - lo.x + gap, -(lo.y + hi.y) / 2, -lo.z))
+        for o in new:
+            if o.parent not in new:
+                o.location += off
+        cursor += hi.x - lo.x + gap
     content += new
     print('IMPORTED', p.name, 'size_mm', [round(x * 1000, 2) for x in hi - lo], 'objects', len(new))
+
+if a.layout == 'assembled':
+    lo, _ = bbox(content)
+    for o in content:
+        if o.parent is None:
+            o.location.z -= lo.z
+bpy.context.view_layer.update()
 
 
 
@@ -161,6 +229,12 @@ if a.ic_color:
 lo, hi = bbox(content)
 size, center = hi - lo, (hi + lo) / 2
 L = max(size.x, size.y)
+print('CONTENT_BOUNDS_MM', [round(x * 1000, 3) for x in lo], [round(x * 1000, 3) for x in hi], flush=True)
+if 'detail' in a.views:
+    detail_target = Vector(tuple(x / 1000 for x in a.detail_target_mm))
+    # 日志只显示到 0.001 mm，同时容纳模型导入后的浮点舍入。
+    if not all(lo[i] - 1e-6 <= detail_target[i] <= hi[i] + 1e-6 for i in range(3)):
+        ap.error('特写中心落在主体范围之外，请按 CONTENT_BOUNDS_MM 复核坐标')
 
 
 def mat(name, rgb, rough, metal=0.0, spec=0.5):
@@ -192,15 +266,16 @@ if a.bg == 'dark':
     nt.links.new(bgnode.outputs['Background'], mix.inputs[1])
     nt.links.new(black.outputs['Background'], mix.inputs[2])
     nt.links.new(mix.outputs['Shader'], nt.nodes['World Output'].inputs['Surface'])
-    bpy.ops.mesh.primitive_cube_add(size=1, location=(center.x + L * 0.12, center.y, -0.0015 * L / 0.04))
-    tray = bpy.context.object
-    tray.scale = (size.x + L * 0.55, size.y + L * 0.30, 0.003 * L / 0.04)
-    bpy.ops.object.transform_apply(scale=True)
-    bev = tray.modifiers.new('bevel', 'BEVEL')
-    bev.width, bev.segments, bev.affect = L * 0.08, 16, 'EDGES'
-    # 托盘亮度主要来自反射的灰环境，不在底色：反光压到 0.1、粗糙 0.8，实测 (41,47,56)，参考图 4 约 (45,52,62)
-    tray.data.materials.append(mat('tray', a.tray, 0.8, spec=a.tray_spec))
-    frame_objs.append(tray)
+    if not a.no_tray:
+        bpy.ops.mesh.primitive_cube_add(size=1, location=(center.x + L * 0.12, center.y, -0.0015 * L / 0.04))
+        tray = bpy.context.object
+        tray.scale = (size.x + L * 0.55, size.y + L * 0.30, 0.003 * L / 0.04)
+        bpy.ops.object.transform_apply(scale=True)
+        bev = tray.modifiers.new('bevel', 'BEVEL')
+        bev.width, bev.segments, bev.affect = L * 0.08, 16, 'EDGES'
+        # 托盘亮度主要来自环境反射。低反光、高粗糙度保留深蓝灰。
+        tray.data.materials.append(mat('tray', a.tray, 0.8, spec=a.tray_spec))
+        frame_objs.append(tray)
 else:
     # 浅冷灰无缝影棚（参考图 1–3）：大地面 + 同色世界补一点环境光
     grey = a.floor   # 参考图 1–3 背景接近白（实测亮度中位 181–231）
@@ -244,7 +319,7 @@ sc.view_settings.view_transform = 'AgX'
 # 参考图是高调、低对比：黑底图亮度中位 37、高光 217，第一版只有 13 / 80
 sc.view_settings.look = 'AgX - Base Contrast'
 sc.view_settings.exposure = a.exposure if a.exposure is not None else (1.2 if a.bg == 'dark' else 1.9)
-sc.render.resolution_x, sc.render.resolution_y = 2400, 1350
+sc.render.resolution_x, sc.render.resolution_y = a.width, a.height
 sc.render.resolution_percentage = a.scale
 sc.render.image_settings.file_format = 'PNG'
 
@@ -263,6 +338,10 @@ def in_frame(margin):
 
 
 def shoot(view):
+    cam_d.dof.use_dof = view == 'detail'
+    cam_d.sensor_fit = 'AUTO'
+    cam_d.clip_start = L * 0.01
+    cam_d.clip_end = L * 200
     if view == 'top':
         # 正交正俯视。旋转 (0,0,0) = 看 -Z、上方 +Y，和 KiCad 俯视同向；
         # 别用 to_track_quat 算竖直视线：方向退化，会随机转 90°（第一版就转了）
@@ -271,8 +350,8 @@ def shoot(view):
         flo, fhi = Vector([min(p[i] for p in corners) for i in range(3)]), Vector([max(p[i] for p in corners) for i in range(3)])
         cam.location = ((flo.x + fhi.x) / 2, (flo.y + fhi.y) / 2, hi.z + H)
         aspect = sc.render.resolution_x / sc.render.resolution_y
-        cam_d.ortho_scale = max(fhi.x - flo.x, (fhi.y - flo.y) * aspect) * 1.18
-    else:
+        cam_d.ortho_scale = max(fhi.x - flo.x, (fhi.y - flo.y) * aspect) * 1.18 / min(1, aspect)
+    elif view == 'iso':
         # 斜视透视：从左前上方看，距离从远往近收，取最后一个完整入画的位置
         cam_d.type, cam_d.lens = 'PERSP', 85
         dirv = Vector((-0.45, -0.8, 0.75)).normalized()
@@ -286,7 +365,22 @@ def shoot(view):
                 cam.location = center + dirv * d
                 break
             d *= 0.95
-    if not in_frame(0.01):
+    else:
+        # 用画面在焦平面上的横宽定构图。特写主动裁切外围，焦点由真实接口坐标决定。
+        cam_d.type, cam_d.lens = 'PERSP', 85
+        cam_d.sensor_fit = 'HORIZONTAL'
+        azimuth, tilt = map(math.radians, (a.detail_azimuth, a.detail_elevation))
+        direction = Vector((math.cos(tilt) * math.cos(azimuth),
+                            math.cos(tilt) * math.sin(azimuth), math.sin(tilt)))
+        distance = (a.detail_width_mm / 1000) * cam_d.lens / cam_d.sensor_width
+        cam.location = detail_target + direction * distance
+        cam.rotation_euler = (-direction).to_track_quat('-Z', 'Y').to_euler()
+        cam_d.clip_start = min(cam_d.clip_start, distance / 100)
+        cam_d.clip_end = max(cam_d.clip_end, distance + L * 2)
+        cam_d.dof.focus_distance = distance
+        cam_d.dof.aperture_fstop = a.detail_fstop
+        print('DETAIL_FOCUS_MM', a.detail_target_mm, 'width_mm', a.detail_width_mm, 'fstop', a.detail_fstop, flush=True)
+    if view != 'detail' and not in_frame(0.01):
         sys.exit(f'{view}: 模型出画')
     out = a.out_dir / f'{a.name}-{view}-{a.bg}.png'
     sc.render.filepath = str(out)
@@ -301,5 +395,5 @@ def shoot(view):
         sys.exit(f'{view}: 过曝 {clipped:.1%}，调小 --expo')
 
 
-for v in ('top', 'iso'):
+for v in a.views:
     shoot(v)
