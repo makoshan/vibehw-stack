@@ -1,7 +1,7 @@
 ---
 name: product-render
-version: 0.2.0
-description: 真实硬件产品渲染。把 KiCad PCB 或整机模型（GLB/STL/OBJ）做成影棚图。保留板、壳、排线、表带的装配关系，从同一场景输出正交俯视、三分之四斜视、接口微距；也可多件平铺。支持纯黑背景与深蓝灰托盘、浅灰无缝背景、哑光阻焊及缎面金属。用 kicad-cli 快速看板，或用 Blender Cycles 拍宣传图。适用「产品图、PCB 美图、拆解图、像参考图的质感、给 deck 配板子图」。尺寸图走 dimensional-drawing，实拍标注走 pcb-photo-annotate。
+version: 0.3.0
+description: 真实硬件产品渲染。把 KiCad PCB 或整机模型（GLB/BLEND/STL/OBJ）做成影棚图。保留板、壳、排线、表带的装配关系，从同一场景输出正交俯视、三分之四斜视、接口微距；也可多件平铺。支持纯黑背景与深蓝灰托盘、浅灰无缝背景、哑光阻焊及缎面金属。用 kicad-cli 快速看板，或用 Blender Cycles 拍宣传图。适用「产品图、PCB 美图、拆解图、像参考图的质感、给 deck 配板子图」。尺寸图走 dimensional-drawing，实拍标注走 pcb-photo-annotate。
 ---
 
 # product-render
@@ -42,6 +42,8 @@ description: 真实硬件产品渲染。把 KiCad PCB 或整机模型（GLB/STL/
 
 做不了、要改源设计的：`DISP` 这类反白标签、logo、安装孔、`BAT CONN` 贴纸——得在 KiCad 丝印层或 3D 模型里真画出来，渲染不会凭空生成。
 
+装配 STEP 导入发白、需要用实际 Gerber 恢复黑色板面，或需要补接口低机位和反侧细节时，读 [黑色阻焊装配与多角度](references/assembled-pcb.md)。
+
 ## B. 跑法
 
 ```bash
@@ -62,7 +64,7 @@ blender -b --factory-startup --python-exit-code 1 --python $S/studio.py -- \
     --samples 32 --scale 40 --name watch out/ assembly.glb
 ```
 
-先用 `--views top,iso` 出预览。特写中心按导入后 Blender 的世界坐标填写，单位是毫米，Z 要扣掉装配最低点。用 `CONTENT_BOUNDS_MM` 核对坐标系与大小，并在模型里量取实际焦点。分文件输入须共享轴向、单位及原点，异构来源优先导出同一整机 GLB。STL/OBJ 的坐标数值要求为米。特写方位角 0° 从 +X 看，90° 从 +Y 看；仰角从水平面向上量。需要同时看清接口两端时，收小光圈（增大 f 值）或加宽取景。正式交付可用 `--width 3840 --height 2160 --scale 100`。
+先用 `--views top,iso` 出预览。特写中心按导入后 Blender 的世界坐标填写，单位是毫米，Z 要扣掉装配最低点。用 `CONTENT_BOUNDS_MM` 核对坐标系与大小，并在模型里量取实际焦点。分文件输入须共享轴向、单位及原点，异构来源优先导出同一整机 GLB。STL/OBJ 的坐标数值要求为米。特写方位角 0° 从 +X 看，90° 从 +Y 看；仰角从水平面向上量。需要同时看清接口和板面时，用 `--detail-deep-focus` 关闭景深，或收小光圈（增大 f 值）。正式交付可用 `--width 3840 --height 2160 --scale 100`。
 
 | 引擎 | 时间（MacBook Air，单视图，实测） | 长处 | 短处 |
 |---|---|---|---|

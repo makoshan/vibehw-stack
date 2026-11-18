@@ -1,6 +1,6 @@
 """Blender 无界面产品影棚：用同一场景出俯视、斜视和可选的接口特写。
 
-输入：.pcb3d（pcb2blender）、.glb/.gltf、.stl、.obj。支持平铺与保留装配坐标。
+输入：.pcb3d（pcb2blender）、.glb/.gltf、.blend、.stl、.obj。支持平铺与保留装配坐标。
 用法：
   blender -b --factory-startup --python-exit-code 1 --python studio.py -- \
       [--bg dark|light] [--samples 128] [--scale 100] [--expo 1.0] [--name out] <out_dir> <模型>...
@@ -50,6 +50,7 @@ ap.add_argument('--no-tray', action='store_true', help='黑底不生成托盘，
 ap.add_argument('--views', type=camera_views, default='top,iso', help='用逗号分隔 top,iso,detail')
 ap.add_argument('--detail-target-mm', type=millimetres,
                 help='落地后 Blender 世界坐标 X,Y,Z，单位 mm')
+ap.add_argument('--detail-deep-focus', action='store_true', help='关闭特写景深，让板面与接口同时清楚')
 ap.add_argument('--detail-width-mm', type=positive, default=18,
                 help='特写在对焦平面上的横向宽度，单位 mm')
 ap.add_argument('--detail-fstop', type=positive, default=14, help='特写光圈，数值越大景深越深')
@@ -57,6 +58,8 @@ ap.add_argument('--detail-azimuth', type=float, default=-120, help='从 +X 向 +
 ap.add_argument('--detail-elevation', type=elevation, default=49, help='从水平面向上的仰角，单位度')
 ap.add_argument('--width', type=int, default=2400)
 ap.add_argument('--height', type=int, default=1350)
+ap.add_argument('--lighting', choices=['soft', 'edge'], default='soft', help='edge 用于深色装配的壳边和接口轮廓')
+ap.add_argument('--no-denoise', action='store_true', help='高采样下保留细丝印和焊脚纹理')
 ap.add_argument('--samples', type=int, default=128)
 ap.add_argument('--scale', type=int, default=100)
 ap.add_argument('--expo', type=float, default=1.0, help='整体照度倍率')
@@ -111,6 +114,13 @@ def import_one(path: Path):
                                             center_boards=a.layout == 'spread')
     elif ext in ('.glb', '.gltf'):
         r = bpy.ops.import_scene.gltf(filepath=str(path))
+    elif ext == '.blend':
+        # 读取渲染专用模型副本，保留对象层级及 Gerber 材质节点。
+        with bpy.data.libraries.load(str(path), link=False) as (source, target):
+            target.objects = source.objects
+        for obj in target.objects:
+            bpy.context.collection.objects.link(obj)
+        r = {'FINISHED'}
     elif ext == '.stl':
         r = bpy.ops.wm.stl_import(filepath=str(path))
     elif ext == '.obj':
@@ -300,12 +310,17 @@ H = L * 4
 E = a.expo * (1.0 if a.bg == 'dark' else 0.8)
 # 顶部大柔光，偏离正上方约 40°：正上方时俯视图里平的金属焊盘把它镜面反射成白点（第一版就是）
 area('key', center + Vector((-0.6 * H, 0.55 * H, H)), L * 3.0, 2.5 * E, center)
-area('side', center + Vector((-H, -H * 0.3, H * 0.45)), L * 1.2, 1.0 * E, center)  # 低角度侧光，打器件立体感
-area('rim', center + Vector((H * 0.8, H * 0.8, H * 0.5)), L * 0.8, 0.3 * E, center)
+edge_lighting = a.lighting == 'edge'
+area('side', center + Vector((-H, -H * 0.3, H * 0.45)), L * 1.2, (0.62 if edge_lighting else 1.0) * E, center)  # 低角度侧光，打器件立体感
+area('rim', center + Vector((H * 0.8, H * 0.8, H * 0.5)), L * (0.72 if edge_lighting else 0.8), (1.3 if edge_lighting else 0.3) * E, center)
 
 sc.render.engine = 'CYCLES'
 sc.cycles.samples = a.samples
-sc.cycles.use_denoising = True
+sc.cycles.use_denoising = not a.no_denoise
+if a.no_denoise:
+    sc.cycles.use_adaptive_sampling = True
+    sc.cycles.adaptive_threshold = 0.012
+    sc.cycles.adaptive_min_samples = min(24, a.samples)
 try:
     prefs = bpy.context.preferences.addons['cycles'].preferences
     prefs.compute_device_type = 'METAL'
@@ -338,7 +353,7 @@ def in_frame(margin):
 
 
 def shoot(view):
-    cam_d.dof.use_dof = view == 'detail'
+    cam_d.dof.use_dof = view == 'detail' and not a.detail_deep_focus
     cam_d.sensor_fit = 'AUTO'
     cam_d.clip_start = L * 0.01
     cam_d.clip_end = L * 200
@@ -375,7 +390,7 @@ def shoot(view):
         distance = (a.detail_width_mm / 1000) * cam_d.lens / cam_d.sensor_width
         cam.location = detail_target + direction * distance
         cam.rotation_euler = (-direction).to_track_quat('-Z', 'Y').to_euler()
-        cam_d.clip_start = min(cam_d.clip_start, distance / 100)
+        cam_d.clip_start = min(cam_d.clip_start, distance / 1000)
         cam_d.clip_end = max(cam_d.clip_end, distance + L * 2)
         cam_d.dof.focus_distance = distance
         cam_d.dof.aperture_fstop = a.detail_fstop
