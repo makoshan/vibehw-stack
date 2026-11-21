@@ -1,6 +1,6 @@
 ---
 name: jlc-order
-version: 0.1.2
+version: 0.1.3
 description: >-
   在嘉立创（jlc.com / jlc-smt.com）下 PCB 打样单 + 经济型 SMT 贴片单的实操流程：先算价、出制造包、
   网页下单、随单传 Gerber、进 SMT 传 BOM/坐标做匹配，停在付款前。来源：MAKO 手表载板 v0.16 第一次真实下单
@@ -50,6 +50,10 @@ description: >-
 通用版（不依赖手表项目脚本）：vibe-hw `agents/jlc.mjs` 的 `runJlc(dir)` 用 `kicad-cli pcb export pos --smd-only` + `sch export bom --fields …,LCSC` 直接出 `jlc/jlc_smt_bom.csv` 和 `jlc_smt_cpl.csv`；任一贴片位号没 C 号就判 block 并列出位号（b-parasite 真板 20 个贴装缺 8 个，这是常态）。`npm run test:jlc`。
 
 ## 3. PCB 网页下单（顺序就是坑）
+
+**FPC 软板入口**：选 FPC，按本板制造文件核对补强面、位置和厚度。每款板单独记录数量、试算价、审单号。页面提示正在解析 EDA 来源时记为「待解析」；重试前先查订单列表，找到对应板的审单号再记「已送审」。整套含税到手价须核齐各板、贴片、载具、税费和运费。2026-11-21 两款软板询价，一款已有试算价，两款均未取得审单号；单次观测，解析原因置信低。
+
+以下七步为 FR-4 硬板流程。
 
 1. 登录后回到 pcbPlaceOrder 页，选 FR-4 → 填尺寸/数量/层数/板厚。**页面上没有上传入口**，Gerber 是提交订单之后才传的。
 2. 左栏"SMT贴片/激光钢网"里"是否SMT贴片"选**需要**（右侧多出"提交pcb订单，去下smt"按钮），钢网不需要（经济型免费给）。
