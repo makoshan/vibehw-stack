@@ -1,7 +1,7 @@
 ---
 name: pcb-design
 metadata:
-  version: "0.8.0"
+  version: "0.9.0"
 description: 绘制、整理或评审电路原理图，以及设计或评审 PCB 时使用；覆盖保电路重画、逐脚核对、布局布线、打板文件和首板调试。
 ---
 
@@ -20,7 +20,7 @@ description: 绘制、整理或评审电路原理图，以及设计或评审 PCB
 > - [OC p.xx]：Schlaepfer & Oskay《Open Circuits》（2023），书页
 > - [补充]：通用工程常识，不是上述来源原话
 >
-> 数值都只是起点，以器件手册、板厂能力和计算器为准。来源之间的冲突见 `references/conflicts.md`；逐讲要点见 `references/mit-course-notes.md`；AoE 摘录见 `references/aoe-notes.md`；高速/射频要点（λ/12 判据、叠层、USB、晶振、50 Ω 馈线，对照 C06/C07）见 `references/sierra-notes.md`；电源完整性（目标阻抗、去耦数量）、串扰、阻抗线和过孔制造数值见 `references/hspcb-notes.md`；PEI / PPE / OC 三本书的摘录见 `references/books-pei-ppe-oc.md`；AoE3 x-Chapters（电容介质、电阻、TVS、高速运放布板、隔离电源噪声、调试）见 `references/aoe3-xch-notes.md`；AoE3 中译上册（去耦与虚地、接地、精密漏电/热电势、输入保护与 ESD、MOSFET 散热）见 `references/aoe3-cn-notes.md`；嘉立创EDA 实操课（STM32 板全流程、嘉立创EDA 设计规则默认值和操作坑、讲师说法纠错）见 `references/jlc-master-course-notes.md`；六层高速板实操（逻辑派 FPGA-G1：BGA 深度估层数、6 层叠层取舍、50/90/100 Ω 规则、DDR3 分组与扇孔、区域规则、焊盘对等长、板边缝合孔、出图下单）见 `references/lckfb-6layer-hs-course-notes.md`（转写数值多数待核）；黄智伟《印制电路板(PCB)设计技术与实践》工程实践（过孔 C/L、串扰 Cm/Lm 分治、0.05λ/0.15λ 接地、20H 权衡、去耦反谐振与磁珠禁区、保护环、DFT/ESD 孤岛击穿）见 `references/hzw-pcb-practice-notes.md`；《嘉立创EDA专业版电子设计速成实战宝典》及官方仿真手册增补（SMD 公式/丝印、正负片内电层分割、PP 残铜压合厚度公式、17 项 DRC、复用/挖槽/跨工具迁移及 NGSpice/XSPICE 前缀映射）见 `references/easyeda-pro-handbook-notes.md`。
+> 数值都只是起点，以器件手册、板厂能力和计算器为准。来源之间的冲突见 `references/conflicts.md`；逐讲要点见 `references/mit-course-notes.md`；AoE 摘录见 `references/aoe-notes.md`；高速/射频要点（λ/12 判据、叠层、USB、晶振、50 Ω 馈线，对照 C06/C07）见 `references/sierra-notes.md`；电源完整性（目标阻抗、去耦数量）、串扰、阻抗线和过孔制造数值见 `references/hspcb-notes.md`；PEI / PPE / OC 三本书的摘录见 `references/books-pei-ppe-oc.md`；AoE3 x-Chapters（电容介质、电阻、TVS、高速运放布板、隔离电源噪声、调试）见 `references/aoe3-xch-notes.md`；AoE3 中译上册（去耦与虚地、接地、精密漏电/热电势、输入保护与 ESD、MOSFET 散热）见 `references/aoe3-cn-notes.md`；嘉立创EDA 实操课（STM32 板全流程、嘉立创EDA 设计规则默认值和操作坑、讲师说法纠错）见 `references/jlc-master-course-notes.md`；六层高速板实操（逻辑派 FPGA-G1：BGA 深度估层数、6 层叠层取舍、50/90/100 Ω 规则、DDR3 分组与扇孔、区域规则、焊盘对等长、板边缝合孔、出图下单）见 `references/lckfb-6layer-hs-course-notes.md`（转写数值多数待核）；黄智伟《印制电路板(PCB)设计技术与实践》工程实践（过孔 C/L、串扰 Cm/Lm 分治、0.05λ/0.15λ 接地、20H 权衡、去耦反谐振与磁珠禁区、保护环、DFT/ESD 孤岛击穿）见 `references/hzw-pcb-practice-notes.md`；《嘉立创EDA专业版电子设计速成实战宝典》及官方仿真手册增补（SMD 公式/丝印、正负片内电层分割、PP 残铜压合厚度公式、17 项 DRC、复用/挖槽/跨工具迁移及 NGSpice/XSPICE 前缀映射）见 `references/easyeda-pro-handbook-notes.md`；Cadence 17.2 全流程（OrCAD 层次图与正反标注、Padstack 6 层与盲埋孔锁层、Allegro 动态铜/Anti Etch/Artwork/DFA/Testprep 与 PSpice 收敛 `IC`/`NODESET`）见 `references/cadence-orcad-allegro-pspice-notes.md`（高速 Constraint Manager 与 SigXplorer 前后仿真另见 `pcb-high-speed-layout`）。
 
 ## 适用场景
 - 新做一块板：从需求一路走到 Gerber
@@ -118,6 +118,7 @@ KiCad 板布完后的收尾交付（走线整洁度 lint/整理/分块看图 →
 - 关断过冲 = V_dc + L_寄生·di/dt；RC 吸收电路降低开关管应力但不提高效率，吸收电阻按功耗选 [PPE §21.3 p614–617]
 - 晶闸管门极 G-K 并电阻防噪声和 dv/dt 误触发；浮地门极用光耦或变压器隔离 [PPE §21.1.3 p611；§22.3 p638–639]
 - 原理图画法：输入左、输出右、正电源上、地下；按功能块分开；器件写位号、值和功率额定；标题栏含名称、设计人、日期和版本记录；关键节点可标预期波形 [PEI §14.2.1 p426–427]
+- 原理图分页与正反标注：平坦多页用 `Off-Page Connector`，层次化方框图纸（自上而下/自下而上）须用 `Port` 一一对齐（复合重复模块切 `Occurrences` 防重号），跑 ERC 时专勾对应端口连接并人工查电源网名；PCB 改序号或脚位交换后须用 `Back Annotate (.swp)` 回写同步（见 `conflicts C32`）。跑 PSpice 仿真分清 `IC`（`0.00025 Ω` 强制钳位，优先级更高，支持电容电感配合 `SKIPBP`）与仅作初始步辅助猜值的 `NODESET`，关键电路加跑 `Monte Carlo` 与 `Worst-Case` 容差分析，AC 频率注意 `MEG` 表兆、禁构纯电源-电感闭合回路与电容割集 [Cadence17.2 §6–7/§14, conflicts C34]
 
 - [ ] ERC 跑过，警告逐条解释或修掉
 - [ ] 每个 IC 的电源、地、使能、复位、配置引脚都已处理，没有悬空的输入
@@ -141,6 +142,7 @@ KiCad 板布完后的收尾交付（走线整洁度 lint/整理/分块看图 →
 - 封装按手册和 IPC-7351 做，核对焊盘、禁布区和 courtyard [JAK]
 - **导入封装的 courtyard 先自检，再信 DRC 的「courtyard 重叠 0」**。情形：封装来自 Altium、嘉立创 `.epro` 或参考设计转换，或者有密排 0201/0402 阵列。规则：跑 DRC 前先跑 `scripts/dfm/kicad_courtyard_check.py board.kicad_pcb`，courtyard 每边要比焊盘外沿大 ≥0.05 mm，不过就换成官方库封装（KiCad `C_0201_0603Metric` 的框是 1.4×0.7）再跑 DRC。出 CPL 后再跑 `scripts/dfm/cpl_spacing_check.py CPL --bom BOM --min-gap 0.10`，按本体公差上限量同面间隙。证据：原力手环 C08A/V4 导入的 0201 courtyard 0.54×0.26，比本体还小，ADS1298 的框没包住引脚；`courtyards_overlap` 设成 error，D1–D18 每版 DRC 0/0。同一套排法的 Y27 被嘉立创 DFM 点名 48 颗 0201 相互干涉，建议不贴 32 颗（待定）。courtyard 脚本 D18 报 112 个，官方库的板报 0；间距脚本在 0.10 mm 下复现了工厂点名的 48 颗（`原力手环 v12/acq-ads1298x2-jlc-20261106/dfm-20261108/`，2026-11-08）。置信：根因高（读了封装几何，正反对照都有）；0.10 mm 阈值低：这单 48 颗就是板上全部 0201，阈值 ≥0.07 都能复现，上限这单给不出，嘉立创也没公布 0201 下限；「换官方库后 DRC 能报出」是按中心距 0.38–0.48 推算的，没实跑。
 - 要焊接的插件孔必须是金属化孔（PTH），非金属化孔（NPTH）只用于安装和定位 [JAK]
+- Allegro 焊盘与封装体系：表贴焊点机械可靠性主要取决于长度而非宽度，与大铜皮相连须经 `0.2–0.4 mm` 宽、`~0.6 mm` 长热隔离导线；建库分清 `.dra/.psm/.pad/.bsm/.fsm/.osm/.ssm` 职责，Padstack 6 层结构须核准 `Regular` / `Thermal (.fsm)` / `Anti Pad`、负片 `SolderMask`（开窗露铜）与正片 `PasteMask`（钢网涂锡），盲埋孔务必勾选 `Lock layer span` 防加层穿孔，实体 `Place_Bound` 填全器件高度供 3D 干涉核检 [Cadence17.2 §9/§11.1, conflicts C33]
 
 ## 阶段 4：叠层
 - 2 层板：底层尽量整片铺地，信号走顶层 [补充]
@@ -287,6 +289,7 @@ KiCad 板布完后的收尾交付（走线整洁度 lint/整理/分块看图 →
 - 参考平面在走线两侧各外延 ≥ 3 倍线宽；135° 斜角代替 90°；差分对长度容差 = 上升时间的 20%，蛇形补偿放在失配拐弯 15 mm 以内 [HSPCB p36, p41, p87, p92]（"3W" 两种含义见 conflicts C14）
 - 去耦回路电感常是几 nH，大于电容本体约 1 nH 的 ESL：电源/地过孔加粗、互相靠近、平面间距小 [HSPCB p72–74]；一对过孔 L ≈ 0.4·h·[ln(2D/d)+1/4] nH（h 单位 mm）
 - **串扰物理分治、防地槽切缝、延迟差与扇孔/等长技巧：** 包地屏蔽线主要抑制 `Cm` 互容串扰（`6–12 dB`；仅两端或多孔接地且线距够大时不加），抑制 `Lm` 互感串扰须压低走线到地平面高度 `H` 并缩短平行段；关键线忌布成有效波长整数倍谐振 [黄智伟 §4.2/§4.5]。过孔电感由孔长 `h` 主导（`L = 5.08·h·[ln(4h/d)+1] nH`，`h/d` 为 `in`），普通未塞孔盘外引孔保持焊盘外扇出、不盖油过孔间距 `≥ 0.5 mm`，密集接插件与 BGA 扇出矩阵务必交错排孔留出铜桥、严防反焊盘连成隐形地槽 [黄智伟 §2.1/§2.3/§5.7/§10.6]。FR-4 外层微带线传播延迟约 `140–180 ps/in`、内层带状线约 `180 ps/in`，跨层高速等长按时延核算 [黄智伟 §8.1/§10.1]。嘉立创实操：规则严格按 `区域规则 > 网络-网络规则 > 网络规则 > 全局默认` 匹配；CHIP 扇孔往两端外侧拉开，连接器线从焊盘中心直出；含串阻单端等长可在备份原理图后临时短接串阻绕完再还回；菊花链分段副本绕线综合 [嘉立创宝典 §9.3/§9.7/§9.11]。
+- **Allegro 约束复用、动态铜与 `Anti Etch`：** 划清物理边 `Board Outline`、`Package Keepin`（内缩 `≥ 2 mm`）与 `Route Keepin`；`17.2` 分层参数 `Dyn_*` 仅作用于动态铜，大改或拉线期将动态填铜切至 `Rough`/`Disabled` 提速，出图前切回 `Smooth` 并执行 `Delete Islands` 清孤岛；负片内层用 `Anti Etch` 分割平面**必须在布线前**完成（分割线须伸出布线框外 → `Split Plane` → `Assign Net`，且全过孔建齐 `.fsm`）；`Add Teardrops` 补泪滴留在全部定稿后最后一步，新开同构板可直接靠 `.tcfx` 技术文件整套复用叠层与 Constraint Manager 规则 [Cadence17.2 §11.3/§12.2–12.5/§13.10]。
 - 单个 8 mil 过孔、温升 5°C 约 0.8 A [HSPCB p109]（见 conflicts C15）
 - 尽量不以电源平面作参考；必须用时在源端、负载端放缝合电容 [HSPCB p97]
 - 判断干扰：30 MHz 以下主要是传导（电源线、线缆），以上主要是辐射 [HSPCB p60]
@@ -328,6 +331,7 @@ KiCad 板布完后的收尾交付（走线整洁度 lint/整理/分块看图 →
 - **跨板 FPC / B2B 连接器投板前必验三维刚体手性，禁止把“已定稿原稿”免检。** 情形：双板或多板通过 FPC 金手指 / 卧式座子对接，或收到外部工程师 / 历史已定稿原稿仅做外观或 3D 清理后准备下单。规则：① 单板 DRC 0、原理图网名一致、只做原稿 Diff 都查不出原稿自带的 `1↔N` 整排镜像反接；必须直接读取双方最终生产 Gerber / 飞针坐标文件，分别计算座子与 FPC 尾端的三维手性标量三重积 `H = (T_in × P_1→N) · N_contact`（`T_in` 为插入/指向嘴部单位向量，`P_1→N` 为 1 脚到 N 脚方向，`N_contact` 为接触面法向）；② 两块刚体物理贴合时插入方向与接触法向均反向、排脚方向同向，正确 `1→1` 对接必满足 `H_fpc = -H_conn`，且三维折弯/翻折永远不改变局部刚体手性符号；③ 同型号单面接触座（如广濑下接座 `FH34SRJ`）分贴母板正反两面时三维手性同号，对接它的两块 FPC 手性也必须同号（切忌共用同款 FPC 封装分别放 Top/Bottom 而不反转 `1..N` 脚序）；④ 同步输出跨板逐脚网名对照表（`Pin 1..N`）并配故意反序必红反例。证据：2026-11-21 OpenEMG 双条表带 FPC（A5+B1）出厂前独立复核，主控侧 AFE 板正反双面同款 30P 下接座手性均为 `+1`（要求软板手性 `-1`）；实测最终 Gerber 飞针与原始来稿，B 板（底面铜）手性 `-1` 正确，A 板因同封装放顶面未反序致手性 `+1`、22/30 脚致命反接（`BIAS` 撞 `REF2`、`CH1_P` 撞 `AGND`、`CH1_N` 撞 `WCT`）；前两轮因信任原稿仅查单板 DRC 0 与 Diff 均漏过，靠三维手性复算在付款前拦截止损。置信：高（双方最终 Gerber 飞针与三维几何不变量双重实证）。
 - **FPC 软板刚柔交界过孔、金手指补强余量及 EDA 多板切板/3D 占位终检。** 情形：外发带 PI/FR4 补强的 FPC 软板制造包，或用脚本/CLI 在同一工程连续导出多块 PCB 的 Gerber 与 3D 预览。规则：① 解析最终钻孔/过孔与补强层多边形，断言过孔焊盘边缘距补强硬边（刚柔过渡折弯线）≥ `1.0 mm`、动态弯折区与窄颈区过孔数为 `0`；② 对照座子手册核足金手指裸铜长度（典型 0.5 mm 间距 ZIF 座 ≥ `2.5–3.0 mm`）与背面补强宽度（超金手指根部 ≥ `1.5–2.0 mm` 且覆盖插拔受力区），偏短即标 P1；③ 清除非贴片机械/电极封装的失效或本地绝对路径 3D 模型引用，防 3D 黑块遮挡与本机路径泄露；④ 自动化脚本在同工程切板导出多份 Gerber 时，切板后必强断言当前激活板 UUID（`active_uuid == target_uuid`）且各板压缩包哈希互异，防切板静默失效导出两份同板假通过；脚本读过孔坐标先核真实字段名（如 `centerX/centerY`）并配已知叠孔反例。证据：2026-11-21 OpenEMG FPC 终检查出 B 板 6 颗 `AGND` 过孔焊盘边距 `0.2 mm` PI 补强硬边仅 `0.151 mm`、A/B 金手指裸铜仅 `1.500 mm` 且 B 板补强宽仅 `2.186 mm`、窄颈末端留 4 颗信号过孔；清理失效 3D 引用后消除占位黑块与本地路径；首轮无头 CLI 导双板因切板未生效致 A/B 两包字节完全相同，补 UUID 强断言后根除；初版叠孔检查误读 `x/y` 字段报假叠孔，改读 `centerX/centerY` 后证实 0 叠孔。置信：中（IPC-2223 软板规范在真板检出；EDA 切板静默失效为单次工具实测）。
 - [ ] **嘉立创 17 项 DRC 重点、异形挖槽、DFT 测点与仿真核对：** 下单前跑全 `设计 > 检查 DRC（自定义）` 含游离铜块（孤铜）/铺铜间距全勾/焊盘到过孔少锡、单板过孔孔径建议 `≤ 2` 种；标准圆/矩形镂空放非金属化焊盘钻孔，异形镂空必须用 `放置 > 挖槽区域 > 多边形`；若导 STEP 须确认零件均绑有 `.step` 模型；丝印线宽 `≥ 5 mil`、距露铜 `≥ 6 mil`（见 `conflicts C31`）[嘉立创宝典 §4.13/§10.1/§11.4/§11.6]。DFT 飞针测试盘直径 `≥ 0.9 mm`（紧凑 `≥ 0.6 mm`）、周围 `0.6 mm` 无器件/`5 mm` 无高件，禁止直接用无引线器件焊端、通孔内连导孔或金手指作测点 [黄智伟 §13.2.2]。若跑嘉立创 NGSpice/XSPICE 仿真，确认模型前缀按代码性质设定（`.subckt` 一律 `X` 而非 PCB 位号 `Q/M`，XSPICE 矢量端口加 `_VE` 后缀且脚号连续），管理器引脚对照表无标红且回路必含 `GND` [嘉立创仿真文档]。
+- [ ] **Allegro 光绘、DFA/Testprep 夹具与跨格式迁移：** 导 RS274X 光绘（Artwork）必勾 `Check database before artwork`、`Vector based pad behavior` 且设置非零 **`Undefined line width`（填 `0` 会丢失零宽丝印框与板框）**，外层禁勾抑制未连焊盘；`Rename RefDes` 重排后立刻 `Export Logic + Back Annotate` 写回原理图；跑装配间隙 `DFA`（含孤立无网孔 `orphan_via_audit`）与自动测试点 `Testprep`（锁定探针坐标并导出夹具 `probe_drill.log`）；丝印高 `≥ 40 mil` / 宽 `≥ 6 mil`。跨 EDA：PADS 导 `.asc` 必须选 `PowerPCB V3.0` 以下格式并指 `pads_in.ini`，DXF 导入显式映射至 `BOARD GEOMETRY/OUTLINE` [Cadence17.2 §13/附录 1–2, conflicts C35]。
 
 ---
 
@@ -445,3 +449,4 @@ KiCad 板布完后的收尾交付（走线整洁度 lint/整理/分块看图 →
 - 华秋 PCB「PCB布局七大黄金法则」：Mako 提供的七张截图（2026-11-01；仅作布局线索，图中数值未验证）；TI CC23xx/CC27xx 布局指南 https://www.ti.com/tw/lit/pdf/swra834；ADI 混合信号布局 https://www.analog.com/en/resources/analog-dialogue/articles/what-are-the-basic-guidelines-for-layout-design-of-mixed-signal-pcbs.html；TI AFE79xx 布局指南 https://www.ti.com/lit/an/sbaa405a/sbaa405a.pdf。
 - 黄智伟《印制电路板（PCB）设计技术与实践》（电子工业出版社，2009，447 页扫描本，Apple Vision OCR + 公式与关键图样张视觉核对，摘录见 `references/hzw-pcb-practice-notes.md`）。
 - 范强、刘吕樱《嘉立创EDA专业版电子设计速成实战宝典》（电子工业出版社，2024，345 页扫描本，Apple Vision OCR + 图形与规则对话框视觉核对）及嘉立创 EDA 专业版官方仿真文档 `https://prodocs.easyeda.com/cn/simulation/new-simulation-device/`、`spice-number-and-pin-number/`（2026-11-22 核查并查看 6 张 UI 截图，摘录见 `references/easyeda-pro-handbook-notes.md`）。
+- 李鹏、吴荣 等《Cadence 17.2 电路设计与仿真 从入门到精通（云课版）》（人民邮电出版社，2020.1，ISBN 978-7-115-50880-5，492 页扫描本，§1/§6–7/§9–15 及附录 1–2 经 Apple Vision OCR + 24 页原图样张视觉核对，OrCAD/Padstack/Allegro/PSpice 摘录见 `references/cadence-orcad-allegro-pspice-notes.md`，Constraint Manager 与 SigXplorer SI 闭环见 `pcb-high-speed-layout/references/allegro-si-sigxplorer-notes.md`）。

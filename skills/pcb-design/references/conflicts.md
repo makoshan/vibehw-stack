@@ -164,3 +164,21 @@
 ## C31 嘉立创EDA 丝印规范差异与仿真实体器件前缀
 - 嘉立创宝典 §4.13 vs 嘉立创大师篇 P17：宝典给默认丝印线宽 `8 mil`（不低于 `5 mil`）且离焊盘露铜 `≥ 6 mil`、穿引脚边界改为虚线/四角框；大师篇给文字高 `50–100 mil`、框线宽 `6–15 mil`。另外嘉立创仿真（NGSpice）中，`Q1` 等位号器件绑定 `.subckt` 时前缀必须填 `X` 而非 `Q`/`M`。
 **处理**：丝印线宽取 `≥ 5–6 mil`、安全距焊盘露铜 `≥ 6 mil`（最终不低于嘉立创工艺最小线宽/字高）；仿真前务必核对模型类型（`.model` 对 `D/Q/M`，`.subckt` 一律 `X`）并保证引脚编号无标红冲突且电路有 `GND`。
+
+## C32 正反标注（Annotate / Back Annotate）跨板号漂移 vs 双轨禁止
+- Cadence 17.2 §6.6 / §13.2：布局后常在 PCB 按 Top/Bottom 坐标顺序重排位号（`Rename RefDes`）或交换门电路/等效脚，必须通过 `Export Logic` + OrCAD `Back Annotate (.swp: CHANGEREF / GATESWAP / PINSWAP)` 写回原理图；复合层次电路需切换 `Occurrences` 模式防多实例重名。
+**处理**：跨工具改位号或交换引脚后**当场完成反标回写与网表重新比对**，严禁 PCB 实物丝印位号和原理图位号变成两套账（也禁止未核准单向覆盖导致复核引用失效）。
+
+## C33 Padstack 显式 6 层结构定义 vs 轻量化 EDA 自动生成热/反焊盘
+- Cadence Padstack Editor §9.8–9.10：通孔/盲埋孔需在焊盘栈（`.pad`）内逐层显式指定 `Regular Pad`、热风花焊盘（`.fsm` Flash）、`Anti Pad` 隔离区、正片 `PasteMask` 与负片 `SolderMask`，盲埋孔还需勾选 `Lock layer span` 防后续插入新层误穿透。
+- 嘉立创/KiCad 常规模式：多数通孔按规则引擎全局计算热风幅宽与反焊盘间隙，不单独维护 `.fsm` 文件。
+**处理**：在 Allegro 生态严格按 6 层表检查并锁盲埋孔跨度、核对负片所用 `.fsm`；在 KiCad/嘉立创则核全局铺铜/内电层发散连接与反焊盘最小环宽，且导包后必查最终 Gerber 负片防反焊盘连片割裂或异网短接。
+
+## C34 PSpice 统计/收敛仿真（MC/Worst-Case/IC-NODESET）与轻量化 NGSpice 边界
+- Cadence PSpice §14.3 / §14.6：内置 `Monte Carlo` 随机公差统计、`Worst-Case` 极限组合、`Noise` 等效噪声密度与精细收敛控制（`IC` 以 `0.00025 Ω` 源强置初值、优先级高于只在第一步生效的 `NODESET`；电容/电感 `IC` 配合 `SKIPBP`），还要求 `M` 表毫、`MEG` 表兆且不可构纯电源-电感闭环或纯电容割集。
+- 嘉立创在线/桌面 NGSpice：适合快速功能/波形/偏置验证（`.subckt` 用 `X`、XSPICE `_VE` 矢量），无开箱即用的图形化工业级 Worst-Case 与器件库容差统计面板。
+**处理**：日常功能、环路定性与小规模调试用原生工具即可；关键模拟前端/电源容差评估、良率最坏极限与双稳态/难收敛振荡电路在 PSpice 或独立 LTspice/NGSpice 网表级严格按 `IC/NODESET` 规则跑统计仿真。
+
+## C35 Allegro 光绘（Artwork）`Undefined line width` 与正负片差异
+- Cadence 17.2 §13.7：Allegro 导出 Gerber RS274X 时，底片参数 `Undefined line width` 默认若留 `0` 会使零宽丝印、框线、甚至板框在底片里彻底丢失；另外 `Negative` 负片会基于 `Shape bounding box`（默认 `100 mil`）向外扩绘黑框，`Vector based pad behavior` 不勾会导致光圈旋转失效。
+**处理**：Allegro 出图硬门禁——`Undefined line width` 一律填正值（例 `4–6 mil`）、必勾 `Vector based pad behavior` 与 `Check database before artwork`、内层与外层严禁混淆 `Suppress unconnected pads`；不论哪款 EDA 出包均需在独立 Gerber 查看器按层目检板框与丝印完整性。
