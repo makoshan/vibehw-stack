@@ -1,7 +1,7 @@
 ---
 name: hardware-structure-design
-version: 0.1.0
-description: 设计或修改硬件产品的外壳、支架及机械装配，将照片、实测尺寸和现有 CAD 转为参数化零件、装配与爆炸图，并检查配合、制造和实物验证边界。适用于结构布局、换件适配、减薄和试制迭代，不用于纯平面或 UI 设计。
+version: 0.2.0
+description: 设计或修改硬件产品的外壳、支架及机械装配，将照片、实测尺寸和现有 CAD 转为参数化零件、装配、爆炸图与国标（GB/T）机械总装配工程图，并检查配合、制造和实物验证边界。适用于结构布局、换件适配、减薄和试制迭代，不用于纯平面或 UI 设计。
 ---
 
 # 硬件结构设计
@@ -39,6 +39,8 @@ description: 设计或修改硬件产品的外壳、支架及机械装配，将�
 要把装配做成可播放的高度收回动画（FreeCAD 出壳 STEP、Blender 无头打点导 glb、three.js 拖时间轴），读 [FreeCAD / Blender 无头跑](references/blender-freecad-headless.md)：freecadcmd 传参、glTF 动画名、paused action 不动这三处都踩过。
 
 用户指定 SOLIDWORKS、要求 SLDPRT/SLDASM 原生交付或需要修改现有原生模型时，读 [SOLIDWORKS 工作流](references/solidworks-workflow.md)。按零件声明编辑真源与可编辑程度；STEP 用于交换和独立验算，不代表原生特征历史已恢复。一般生成任务继续复用现有工具，不为格式转换重建整机。
+
+需要输出符合国家标准（GB/T）的机械总装配工程图（第一角正投影视图组、全剖/横剖异向剖面线、薄片涂黑夸大画法、五类必要装配尺寸、气球序号、自下而上明细栏与装配单元系统图），无论走远端 SOLIDWORKS `.SLDDRW` 还是本机无头 FreeCAD `TechDraw` 矢量出图，读 [国标机械装配工程图规范与双路线出图](references/gb-assembly-drawing.md)。
 
 ## 验证与质量门槛
 

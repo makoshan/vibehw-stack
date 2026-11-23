@@ -27,9 +27,13 @@
 
 ```sh
 python3 <skill-dir>/scripts/solidworks_remote.py --check
+python3 <skill-dir>/scripts/sw_gb_assembly_drawing.py --self-test
+python3 <skill-dir>/scripts/sw_gb_assembly_drawing.py --preflight-only
 python3 <skill-dir>/scripts/solidworks_remote.py calls.json
 python3 <skill-dir>/scripts/solidworks_remote.py --status <run_id>
 ```
+
+派发远端 COM 任务前必跑 `--preflight-only`：同时核查 `.solidworks-cad-writer.lock` 未被其他会话占用，且远端 Windows 许可服务（如 `SolidWorks Flexnet Server`）处于 `Running`。若许可服务为 `Stopped`，`SLDWORKS.exe` 启动后会静默卡在桌面 Session 1 的 `#32770` 确认模态框直至 120s 超时（SSH 所在的 Session 0 直接调 `EnumWindows` 看不见 Session 1 窗口，确需排查弹窗须经 `LogonType Interactive` 计划任务只读枚举，严禁触碰或修改许可服务文件）。
 
 这不是自动注册到宿主工具列表的常驻MCP服务。不要宣称仅安装脚本即可从任意客户端直接调用命名工具。
 
@@ -47,8 +51,8 @@ python3 <skill-dir>/scripts/solidworks_remote.py --status <run_id>
 ## COM 和几何选择
 
 - `FeatureExtrusion2` 反向拉伸用第3参 `Dir`，第2参 `Flip` 只管切除侧；方向错不会报错，靠体积/包围盒自检抓（2026-09-24 实测差 260×16×1）。
-- 不用通用 `callable()` 判断COM对象是不是需要调用的方法；返回的COM对象也可能可调用。核对对象/类型库，必要时对已确认的方法显式 `_FlagAsMethod`。适配差异留在适配层，不复制到每个模型。
-- 中文模板与基准面按实际模板、特征类型或明确名称解析，不默认英文 `Part.prtdot` / `Front Plane`。
+- 不用通用 `callable()` 判断COM对象是不是需要调用的方法；`pywin32` 返回的 `CDispatch` 对象也实现了 `__call__`（`callable(val)` 为真），统一用 `callable(val) and not hasattr(val, "_oleobj_")` 区分真正的方法包装器与 COM 子对象。核对对象/类型库，必要时对已确认的方法显式 `_FlagAsMethod`。适配差异留在适配层，不复制到每个模型。
+- 中文模板与基准面按实际模板、特征类型或明确名称解析，不默认英文 `Part.prtdot` / `Front Plane`。SOLIDWORKS 中文安装下的国标模板通常位于 `$env:ProgramData\SOLIDWORKS\SOLIDWORKS <年份>\templates\`（`gb_part.prtdot`、`gb_assembly.asmdot`、`gb_a0.drwdot`–`gb_a4.drwdot`）及安装目录 `lang\chinese-simplified\gb-bom-material.sldbomtbt`；自动生成国标装配体与工程图（`.SLDDRW` / 矢量 PDF）见 [国标机械装配工程图规范与双路线出图](gb-assembly-drawing.md) 与 `scripts/sw_gb_assembly_drawing.py`。
 - 优先限定目标特征及面后选择边，验证类型、法向/位置、数量与是否重复。坐标选取返回True不能证明选对边；尽量不遍历整机所有边来完成一个局部修改。
 - 变更后核对体积趋势、局部形状及受保护区域。选择错误可能仍得到有效实体，不能仅以“无API异常”判成功。
 

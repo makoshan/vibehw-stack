@@ -1,6 +1,6 @@
 ---
 name: vibehw-stack
-version: 0.3.9
+version: 0.3.10
 description: >-
   Mako 的硬件栈——架在 mstack 之上、专管「一个人 + 一群 AI 代理做出实物」的那一层：从零到实物的七段路、
   每一段派哪个 skill、每一段的门禁是什么，以及硬件特有的四条铁律（实物为准、agent 不碰钱、通电前断电核对、
@@ -101,7 +101,7 @@ mstack 第 1 节的通用条目不重抄，这里只列硬件特有的：
 | | 树脂外发 / 材料与报价 | `jlc-3dp` |
 | | 外壳贴着 PCB 的配合、测点与插头能不能够到、Web3D 装配 GLB 轻量化与关节注入 | `pcb-enclosure-fit` |
 | | 手环结构（分件、卡扣、电极、表带、防水） | `product-structure-design` |
-| | 照片 / 实测 → 参数化零件；Fusion / SolidWorks 驱动 | `hardware-structure-design` |
+| | 照片 / 实测 → 参数化零件；Fusion / SolidWorks 驱动；国标机械装配工程图与剖视消隐 | `hardware-structure-design` |
 | | 参考图 → STEP/3MF 流水线 | `ai-cad-pipeline` |
 | | 按实物反馈改壳、build123d / OCC 几何坑 | `mako-cad-fit` |
 | | 打印方向 / 支撑 / 壁厚；X2D 切片 | `fdm-slicing` / `bambu-x2d-slice` |
