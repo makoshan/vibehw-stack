@@ -53,6 +53,11 @@ python3 <skill-dir>/scripts/solidworks_remote.py --status <run_id>
 - `FeatureExtrusion2` 反向拉伸用第3参 `Dir`，第2参 `Flip` 只管切除侧；方向错不会报错，靠体积/包围盒自检抓（2026-09-24 实测差 260×16×1）。
 - 不用通用 `callable()` 判断COM对象是不是需要调用的方法；`pywin32` 返回的 `CDispatch` 对象也实现了 `__call__`（`callable(val)` 为真），统一用 `callable(val) and not hasattr(val, "_oleobj_")` 区分真正的方法包装器与 COM 子对象。核对对象/类型库，必要时对已确认的方法显式 `_FlagAsMethod`。适配差异留在适配层，不复制到每个模型。
 - 中文模板与基准面按实际模板、特征类型或明确名称解析，不默认英文 `Part.prtdot` / `Front Plane`。SOLIDWORKS 中文安装下的国标模板通常位于 `$env:ProgramData\SOLIDWORKS\SOLIDWORKS <年份>\templates\`（`gb_part.prtdot`、`gb_assembly.asmdot`、`gb_a0.drwdot`–`gb_a4.drwdot`）及安装目录 `lang\chinese-simplified\gb-bom-material.sldbomtbt`；自动生成国标装配体与工程图（`.SLDDRW` / 矢量 PDF）见 [国标机械装配工程图规范与双路线出图](gb-assembly-drawing.md) 与 `scripts/sw_gb_assembly_drawing.py`。
+- **嘉立创 EDA 专业版 → SOLIDWORKS 双路径选型与无头直出 STEP 护栏**：
+  - **情形**：需把嘉立创 EDA 专业版（`.epro2` / `.eprj3`）的 PCB 与元件 3D 模型导入 SOLIDWORKS 做装壳与干涉检查，在「导出 STEP」与「官方 `eext-mcad-integration-with-solidworks` 协同插件」间选路。
+  - **规则**：① 官方协同插件底层同样调 `eda.pcb_ManufactureData.get3DFile('pcbModel', 'step', ['Component Model'], 'Parts')`，再经 `ws://localhost:8767` 发往 Windows 端闭源「嘉立创 Ican 工具箱」SW 插件（导入后须手动将子装配体改「浮动」才可双向挪件），仅适合同机交互微调刚性板布局；② 跨机（Mac 改板 + Windows 跑 SW）或自动化核验优先走无头 CLI 直出：避开受「外部交互权限」拦截的 `sys_FileManager`，直接把 `.epro2` 内 `.epru` 的 `PCB/FOOTPRINT/DEVICE/SYMBOL/MODEL3D` 段解包写入临时 `.eprj3` 的 `pcb/*.epcb2`，`open --headless true` 后调 `get3DFile(..., 'step', ['Component Model'], 'Parts', true)` 并按 `≤384 KB` Base64 分块读回（防超 `ARG_MAX`）；③ `'Parts'` 模式导出的 STEP 被 SOLIDWORKS `LoadFile4` 自动识别为**装配体 `IAssemblyDoc`（`GetType() == 2`，存 `.SLDASM`，包围盒调 `GetBox(0)`）**而非单零件 `IPartDoc`（调 `GetPartBox` 会抛 `AttributeError`）；④ **两种官方方式导出的柔性板（FPC）均为二维平铺直板**，测 `180°` U 形折弯插深与弯弧净空必须另建三维折弯实体送入 SW `InterferenceDetectionManager` 复核。
+  - **证据**：2026-11-23 拆读 `eext-mcad-integration-with-solidworks/src/index.ts` 并用 `LCEDA-Pro 4.1.93` 无头导出双软板 STEP（`0.99 / 1.04 MB`）送入 SOLIDWORKS 2025（`33.5.0`），自动生成各含 37 组件的 `.SLDASM`（保留原厂 `R0402_L1.0-W0.5-H0.4` 模型，平铺总高 `0.663 mm`）。
+  - **置信**：高（官方扩展源码与双机真机实跑互证）。
 - 优先限定目标特征及面后选择边，验证类型、法向/位置、数量与是否重复。坐标选取返回True不能证明选对边；尽量不遍历整机所有边来完成一个局部修改。
 - 变更后核对体积趋势、局部形状及受保护区域。选择错误可能仍得到有效实体，不能仅以“无API异常”判成功。
 
