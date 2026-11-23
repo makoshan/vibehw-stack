@@ -1,6 +1,6 @@
 ---
 name: mako-cad-fit
-version: 0.1.1
+version: 0.1.2
 description: Use when iterating Mako's printed watch enclosure or similar fitted plastic parts from assembly, breakage, or motion feedback; preserve accepted interfaces, check real motion and print datums, and manage rejected revisions.
 ---
 
@@ -66,6 +66,8 @@ description: Use when iterating Mako's printed watch enclosure or similar fitted
 - **build123d / OCC 的布尔在相切、贴得很近时会算错，而且不报错。** 情形：两个实体面重合或相切、间隙小于约 0.15 mm（0.105 也出过错），或一条扫掠管拐得急。规则：①建模时别让槽底、贴合面正好相切，留 ≥0.05 mm 的料或间隙；②求交结果要配一个探针：远离管子的小盒必须不相交、管上的小盒必须相交；③布尔抛异常时改用网格取点估算重叠，不能当 0；④靠构造保证的间隙（比如"中心 = 内表面 + 0.10 + 半径"），沿路径逐点算出来检查，不信 OCC 的求交；⑤两段扫掠要熔成一个实体，搭接要扫一遍取稳的值，熔完检查实体数是 1。证据：原力手环 c05-strap 2026-10-21/22：让位槽底与软板顶面相切，平放形态 Null TopoDS_Shape；槽底只留 0.01，戴上形态护套变坏实体；离带 0.105 的线束管，求交返回整根管 22.2 mm³；扁线段与圆束段搭接 0.3 时熔成两块，导出镜像也跟着错，扫 0.5/0.8/1.0/1.5 后取 0.8。置信：中（同一会话里四种表现，都已复现）。
 
 - **STEP 读回别按索引对名字。** 情形：独立读回 STEP，要按清单量某个零件。规则：一件可能拆成多个实体，实体数和清单数不同时，按形状和包围盒筛，再核一次分组；距离得 0 先查分组，别先判碰撞。证据：C08B 3D 第三轮实体数多于清单条数，按索引量错件；两尾距离 0 是分组错，修后 0.03 mm，见 `v12/c08b-d16-3d-r7-20261106/step_check.py`。置信：低，只见过一次。
+- **`a.intersect(b)` 多块相交返回 `ShapeList`（非 `Shape`、无 `.volume`/`.bounding_box`），手写 `isinstance(..., Shape)` 或 `hasattr(..., "volume")` 会静默吞成 `0.0 mm³`。** 情形：插头扫掠盒同时擦过 U 型槽左右两壁、或长件跨两根立柱调 `.intersect()` 求交，交集含 `≥2` 个分离实体。规则：`build123d` 的 `.intersect()` 在单块相交时返回 `Solid`（`isinstance(..., Shape)==True`，带 `.volume`），多块相交时返回 `ShapeList`（`list` 子类，`isinstance(..., Shape)`、`hasattr(..., "volume")` 与 `hasattr(..., "bounding_box")` 全为 `False`，而 `a & b` 返回 `Part`）；禁止手写 `inter.volume if isinstance(inter, Shape) else 0.0`（会把双侧真撞壁静默吞成 `0.0 mm³`），一律调 `fitprobe.clash` 或递归展开 `list/tuple` 取叶 `Solid` 求和，并在探针自检放一条横跨 U 型槽双壁的必败阳性对照。证据：2026-11-22 双板全高外壳 `check_fit.py` 初版按单 `Shape` 取 `.volume` 时，`15 mm` 超宽假插头撞 `13.6 mm` U 型槽双壁静默报 `0.0 mm³`；改为递归展开叶 `Solid` 并固化进 `fitprobe.py` 后当场检出双块干涉（提交 `10e99ef60`）。置信：低（单次复现，已将 `.intersect()` 类型断言写入 `test_fitprobe.py` 自检）。
+- **开孔后对 `Compound` 用 `+` 只打包不布尔熔合，且 `BuildSketch` 内 `Pos *` 位移与自定义 `Polygon` 挤出法向易静默偏位。** 情形：先 `.cut()` 开槽使 `Part` 退化为 `Compound` 再用 `+` 加凸台/销钉，或在 `with BuildSketch():` 内写 `Pos(x, y) * RectangleRounded(...)`、对顺时针顶点 `Polygon` 做 `extrude`。规则：① 凡要产出单连通打印件，先按依赖拓扑顺序逐个 `cur = cur.fuse(add)`（防悬空子特征先于底座求并漏合），再逐个 `cur = cur.cut(cut)`，收尾跑 `fitprobe.assert_healthy(..., require_single=True)` 强断 `len(solids) == 1`；② 不用 `with BuildSketch()` 混写代数 `Pos *`（平移临时件被丢弃，原位 `(0,0)` 草图被注册），统一用纯代数 `Pos(x, y, z0) * extrude(...)`；③ 自定义多边形挤出后用 `Pos(x0 - bb.min.X, y0 - bb.min.Y, z0 - bb.min.Z)` 显式对齐包围盒下界，消除绕序相反引起的 `-Z/-Y` 反向挤出。证据：2026-11-22 外壳底托初版混用 `Part - hole + boss` 产出 10 个分离实体且圆角矩形全落回 `(0,0)`，表带楔形钩反向挤出偏移 `2.8 mm`；改纯代数顺序 `.fuse()/.cut()` 加包围盒下界对齐后，三件套与试装件全部 `solids == 1`（提交 `10e99ef60`、`7241418b2`）。置信：低（同一轮建模同时修三处几何偏移，靠 `assert_healthy` 拦截单实体约束，第二次单独复现再升）。
 
 ## 交付与撤销
 

@@ -1,7 +1,7 @@
 ---
 name: bambu-x2d-slice
-version: 0.1.0
-description: 使用本机 Bambu Studio 为 X2D 将独立 STL 切片并交付含 G-code 的 3mf，支持 PETG 主体与 PLA 支撑界面；用于排盘、材料映射、支撑和切片验证，不负责修改 CAD。
+version: 0.1.1
+description: 使用本机 Bambu Studio 为 X2D 将独立 STL 切片并交付含 G-code 的 3mf，支持 PETG+PLA 支撑界面、PETG+TPU 95A 双喷嘴软硬同盘及夜间低速静音模式；用于排盘、材料映射、支撑和切片验证，不负责修改 CAD。
 ---
 
 # X2D 切片交付
@@ -22,6 +22,9 @@ description: 使用本机 Bambu Studio 为 X2D 将独立 STL 切片并交付含 
 检查各打印件方向、平面贴板与悬空支撑。以 STL 已验证方向为准时用 `--orient 0`，排盘可用 `--arrange 1`，切后再检查。不要为少支撑擅自改变几何。
 
 双材料要明确主体、支撑树干、支撑界面分别用什么。界面零间距是具体材料配对的候选参数，不是通用值。喷嘴映射必须核对导出结果，不能只看输入配置。按当前喷嘴有效范围放置擦料塔。
+
+- **X2D 双喷嘴异温软硬料（如 `PETG + TPU 95A`）同盘 CLI 必传 `--allow-mix-temp=1` 等号语法，禁空格拆参。** 情形：用 BambuStudio CLI 将多个刚性件（`T0=PETG`）与柔性件（`T1=TPU 95A`）排在同一盘双喷嘴切片。规则：传 `--allow-multicolor-oneplate --allow-mix-temp=1 --load-filament-ids "1,1,...,2,2"`；**`--allow-mix-temp=1` 必须带等号**——写成空格 `--allow-mix-temp 1` 时，`02.08.02.61` CLI 会把 `"1"` 当成额外输入 STL 路径，报 `loaded_filament_ids size N should be the same with input files size N+1`（退出码 `254`）；启用擦料塔且断言全盘 `0` Brim 时显式设 `prime_tower_brim_width="0"`；若需 `0` 换头单料过夜试装，可将柔性表带改为 `0.48 mm`（`3` 层）分段槽轨薄片走单 `PETG` 同盘切出。证据：2026-11-22 10 件试装包同盘 `PETG+TPU` 切片踩中空格参数 `exit 254` 与擦料塔默认裙边，改等号语法与 `prime_tower_brim_width="0"` 后 `exit 0`（93 层、26 次换头、`0` Support/`0` Brim，提交 `27fc9424a`）。置信：低（单次 Bambu Studio `02.08.02.61` CLI 复现，第二次出现再升）。
+- **夜间睡眠静音切片须同步压低 6 元挤出机速度/加速度数组、关辅助风扇，并在 G-code 正文核验实际 `G1 F` 与 `M204`。** 情形：打印机在卧室/书房过夜运行，仅开面板「静音模式（50% 速度）」挡不住 `1000 mm/s` 空驶、`10000 mm/s²` 换向砸框声与辅助冷却风扇呼啸。规则：① X2D 官方 `process` 预设的速度/加速度多为长度 6 的字符串数组，覆盖时按原数组长度整组写入：空驶 `travel_speed` `1000→180 mm/s`、外/内墙 `45/65 mm/s`、默认/空驶加速度 `10000→1500 mm/s²`、外墙加速度 `800 mm/s²`、`machine.silent_mode="1"`；② 耗材 JSON 设 `additional_cooling_fan_speed=["0"]` 关停辅助鼓风机，保留喷嘴模型风扇（PETG `15%–35%`）防悬垂塌陷；③ 解压 `Metadata/plate_1.gcode` 跳过起始宏（`LAYER_CHANGE` 之后）实测最大/P95 `G1 F` 换算速度与 `M204 S` 加速度，确认上限真实生效。证据：2026-11-22 X2D 10 件全套夜间静音盘实测正文 P95 速度 `180.0 mm/s`、最大加速度 `1500 mm/s²`、辅助风扇归零，双喷嘴估算 `251.7 min`、单 `PETG` 零换头版 `186.4 min`（提交 `27fc9424a`）。置信：低（单次 G-code 指令逐行核验，体感分贝待实打复核）。
 
 ## 验证与交付
 

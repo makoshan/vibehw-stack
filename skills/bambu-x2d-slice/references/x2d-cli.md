@@ -38,3 +38,37 @@
 项目根目录 `~/go/202608/智能手表`，`models/emg-wrist-v04-x2d/` 包含 config、日志、PETG-PLA-validation.json 与双料 3mf；`evidence/2026-09-24-emg-v04-x2d-slice.md` 为证据。路径仅用于本机回查，本 Skill 的使用不依赖该项目存在。
 
 ZIP CRC通过；4独立对象；137层；PLA用于层索引97–99的界面及擦料塔，未用于墙、填充或树干。估算4010秒，PETG20.29g、PLA0.32g。上壳顶面贴板、内腔向上，支撑用于悬空表耳。模型几何未修改，未发送打印，实物未验收。
+
+## 双喷嘴软硬同盘（PETG + TPU 95A）与夜间静音覆盖参考（2026-11-22）
+
+### 1. 软硬同盘 CLI 调用（`--allow-mix-temp=1` 必带等号）
+
+10 个独立 STL 同盘（前 6 件刚性 `T0=PETG`，后 4 件柔性表带/软板 `T1=TPU 95A`）：
+
+```sh
+"/Applications/BambuStudio.app/Contents/MacOS/BambuStudio" \
+  --debug 2 --datadir "$PWD/data" \
+  --load-settings "$PWD/machine.json;$PWD/process.json" \
+  --load-filaments "$PWD/PETG-HF.json;$PWD/TPU-95A.json" \
+  --load-filament-ids "1,1,1,1,1,1,2,2,2,2" \
+  --allow-multicolor-oneplate --allow-mix-temp=1 \
+  --orient 0 --arrange 1 --slice 0 \
+  --export-3mf NightSilent-DualNozzle-PETG+TPU95A-X2D.3mf --outputdir "$PWD" \
+  "$PWD/part_01.stl" ... "$PWD/part_10.stl" > slice.log 2>&1
+```
+
+- 踩坑：`--allow-mix-temp 1`（中间空格）会让 `02.08.02.61` 把 `"1"` 解析成第 `N+1` 个输入模型，报 `loaded_filament_ids size 10 should be the same with input files size 11`（`exit 254`）；写成 `--allow-mix-temp=1` 即可。
+- 擦料塔若要求全盘零裙边，须显式写 `"prime_tower_brim_width": "0"`（否则擦料塔默认仍打 `; FEATURE: Skirt/Brim`）。
+
+### 2. 夜间睡眠低速静音 JSON 覆盖表（X2D 6 元挤出机槽位数组）
+
+X2D 的 `0.16mm Standard @BBL X2D` 中速度/加速度多为长度 6 的数组，覆盖时按原类型保持标量或 6 元数组：
+
+- `machine.json`：`"silent_mode": "1"`。
+- `process.json`（若原键为 `list` 则填 `["值"] * 6`）：
+  - `travel_speed`: `180`（默认 `1000`）
+  - `outer_wall_speed`: `45`，`inner_wall_speed`: `65`，`sparse_infill_speed`: `80`，`internal_solid_infill_speed`: `70`，`top_surface_speed`: `40`，`bridge_speed`: `25`，`initial_layer_speed`: `25`
+  - `default_acceleration` / `travel_acceleration`: `1500`（默认 `10000`）
+  - `outer_wall_acceleration`: `800`，`inner_wall_acceleration`: `1200`，`initial_layer_acceleration`: `500`
+- 耗材 JSON：`"additional_cooling_fan_speed": ["0"]`（关停机箱辅助大风扇），保留模型冷却风扇（`PETG` 约 `15%–35%`、`TPU` 约 `20%–40%`）。
+- 产物验证：读取 `.3mf` 内 `Metadata/plate_1.gcode`，在首个 `LAYER_CHANGE` 之后统计所有 `G1 ... F<mm/min>`（除以 `60` 得 `mm/s`）与 `M204 S<mm/s²>`，断言 P95 速度 `≤ 180 mm/s` 且最大加速度 `≤ 1500 mm/s²`。

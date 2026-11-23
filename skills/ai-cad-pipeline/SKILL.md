@@ -1,6 +1,6 @@
 ---
 name: ai-cad-pipeline
-version: 0.1.0
+version: 0.1.1
 description: |
   从参考图/渲染稿到可打印 STEP+3MF 套件的完整 AI CAD 流水线（硬件外壳、桌面机器人壳、PCB 盒）：
   尺寸源分级 → 让 AI 出带尺寸的正交参考图（Codex/genimg）→ 母曲面选路（Fusion MCP 变半径圆角+抽壳 vs build123d/OCC）
@@ -46,7 +46,7 @@ import os, sys; sys.path.insert(0, os.path.expanduser("~/.claude/skills/ai-cad-p
 from fitprobe import (
     PLUG_ENVELOPE, assert_healthy, clash, fits, envelope, wall_at, solids, outside, sag,
     plug_sweep, slide_path, fpc_tail_length, cylinder_axes, match_holes,
-    under_board_top_z, floating_stop_check,
+    under_board_top_z, floating_stop_check, b2b_pitch_check, edge_io_mutex_check, rivet_hole_fit_check,
 )
 
 assert_healthy(shell, 36000, 43500, "shell")  # 体积区间+单体健全防线（防残骸假通过）

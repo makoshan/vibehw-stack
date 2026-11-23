@@ -5,17 +5,20 @@ from __future__ import annotations
 from pathlib import Path
 import sys
 
-from build123d import Box, Cylinder, GeomType, Pos
+from build123d import Box, Cylinder, GeomType, Pos, Shape
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from fitprobe import (  # noqa: E402
     PLUG_ENVELOPE,
     assert_healthy,
+    b2b_pitch_check,
     clash,
+    edge_io_mutex_check,
     fpc_tail_length,
     floating_stop_check,
     match_holes,
     plug_sweep,
+    rivet_hole_fit_check,
     slide_path,
     solids,
     under_board_top_z,
@@ -111,7 +114,62 @@ def main() -> int:
     r_float_good = floating_stop_check(electrode, limiter, pcb_high, gap_dz=0.05, stop_dz=0.20)
     assert r_float_good["clear"] and r_float_good["at_stop_dz"]["stop_clash"] >= 0.8, r_float_good
 
-    print("PASS: test_fitprobe.py 7 组必败反例全红，修正版全绿")
+    # 8. b2b_pitch_check：分别独立验证 (8a) 中心距差 0.500mm、(8b) 逐脚世界坐标奇偶列镜像 1.27mm、(8c) 声明式标记，以及对齐正例
+    r_b2b_pitch_bad = b2b_pitch_check(
+        [(23.0, 5.0), (23.0, 33.5)],
+        [(23.0, 5.198), (23.0, 33.198)],
+        pitch_tol=0.05,
+    )
+    assert not r_b2b_pitch_bad["clear"] and abs(r_b2b_pitch_bad["max_mismatch_mm"] - 0.5) < 1e-4 and not r_b2b_pitch_bad["mirror_pin_swap_risk"], r_b2b_pitch_bad
+    r_b2b_pin_bad = b2b_pitch_check(
+        [(23.0, 5.0), (23.0, 33.5)],
+        [(23.0, 5.0), (23.0, 33.5)],
+        pitch_tol=0.05,
+        pin_world_xy=({"1": (-0.635, 5.0), "2": (0.635, 5.0)}, {"1": (0.635, 5.0), "2": (-0.635, 5.0)}),
+    )
+    assert not r_b2b_pin_bad["clear"] and len(r_b2b_pin_bad["pin_mismatches"]) == 2, r_b2b_pin_bad
+    r_b2b_flag_bad = b2b_pitch_check(
+        [(23.0, 5.0), (23.0, 33.5)],
+        [(23.0, 5.0), (23.0, 33.5)],
+        pitch_tol=0.05,
+        dual_row_mirror=("TOP", "BOTTOM", True),
+    )
+    assert not r_b2b_flag_bad["clear"] and r_b2b_flag_bad["max_mismatch_mm"] == 0.0 and r_b2b_flag_bad["mirror_pin_swap_risk"], r_b2b_flag_bad
+    r_b2b_good = b2b_pitch_check(
+        [(23.0, 5.0), (23.0, 33.5)],
+        [(23.0, 5.0), (23.0, 33.5)],
+        pitch_tol=0.05,
+        dual_row_mirror=("TOP", "BOTTOM", False),
+        pin_world_xy=({"1": (-0.635, 5.0), "2": (0.635, 5.0)}, {"1": (-0.635, 5.0), "2": (0.635, 5.0)}),
+    )
+    assert r_b2b_good["clear"] and r_b2b_good["max_mismatch_mm"] == 0.0 and not r_b2b_good["mirror_pin_swap_risk"], r_b2b_good
+
+    # 9. edge_io_mutex_check：南北双边出表带时南边同放 USB2 + SW1 判红；北侧出带、东侧放 USB1 + U1 判绿
+    r_edge_bad = edge_io_mutex_check(["+Y", "-Y"], [{"name": "USB2", "edge": "-Y"}, {"name": "SW1", "edge": "-Y"}])
+    assert not r_edge_bad["clear"] and len(r_edge_bad["conflicts"]) == 2, r_edge_bad
+    r_edge_good = edge_io_mutex_check(["+Y"], [{"name": "USB1", "edge": "+X"}, {"name": "U1_SW", "edge": "+X"}])
+    assert r_edge_good["clear"], r_edge_good
+
+    # 10. ShapeList 多块相交回归防线：超宽插头横跨 U 型槽双侧壁时，`.intersect()` 返回 ShapeList（非 Shape、无 .volume/.bounding_box）
+    u_wall = (Pos(0, 0, 5) * Box(30.0, 4.0, 10.0)) - (Pos(0, 0, 7) * Box(13.6, 6.0, 8.0))
+    wide_plug = Pos(0, 0, 7) * Box(15.6, 4.0, 6.0)  # 左右各撞壁 1.0×4.0×6.0 = 24.0 mm^3，共 48.0 mm^3 双块
+    raw_inter = u_wall.intersect(wide_plug)
+    assert isinstance(raw_inter, list) and not isinstance(raw_inter, Shape) and not hasattr(raw_inter, "volume"), type(raw_inter)
+    assert solids(raw_inter, "multi_inter")["count"] == 2
+    tot_multi, lumps_multi = clash(u_wall, wide_plug, detail=True)
+    assert abs(tot_multi - 48.0) < 0.05 and len(lumps_multi) == 2, (tot_multi, lumps_multi)
+    narrow_plug = Pos(0, 0, 7) * Box(13.0, 4.0, 6.0)
+    assert clash(u_wall, narrow_plug) == 0.0
+
+    # 11. rivet_hole_fit_check：Φ1.5×Φ0.8 黄铜铆钉穿 Ø1.60/Ø2.20 焊盘孔直穿判红；帽檐过窄判红；Φ3.5×Φ0.8 配 Ø0.90 孔判绿
+    r_riv_drop = rivet_hole_fit_check(hole_d=1.60, head_d=1.50, shaft_d=0.80)
+    assert not r_riv_drop["clear"] and r_riv_drop["drop_through"], r_riv_drop
+    r_riv_rim = rivet_hole_fit_check(hole_d=1.60, head_d=1.90, shaft_d=1.40)
+    assert not r_riv_rim["clear"] and not r_riv_rim["grip_ok"], r_riv_rim
+    r_riv_good = rivet_hole_fit_check(hole_d=0.90, head_d=3.50, shaft_d=0.80)
+    assert r_riv_good["clear"] and r_riv_good["annular_rim_per_side_mm"] == 1.30, r_riv_good
+
+    print("PASS: test_fitprobe.py 11 组必败反例全红，修正版全绿")
     return 0
 
 

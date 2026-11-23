@@ -20,6 +20,7 @@ Rules of use:
         PLUG_ENVELOPE, clash, fits, envelope, wall_at, solids, outside, sag,
         plug_sweep, slide_path, fpc_tail_length,
         assert_healthy, cylinder_axes, match_holes, under_board_top_z, floating_stop_check,
+        b2b_pitch_check, edge_io_mutex_check, rivet_hole_fit_check,
     )
 """
 
@@ -36,10 +37,28 @@ PLUG_ENVELOPE: dict[str, tuple[float, float]] = {
 }
 
 
-def _vol(shape) -> float:
+def _solids_of(shape) -> list[Solid]:
+    """Recursively unwrap build123d Shape / ShapeList / list / tuple into Solid leaves.
+
+    `a.intersect(b)` returns a single `Solid` (`isinstance(..., Shape)==True`, has `.volume`
+    and `.bounding_box()`) when overlap is one connected region, but returns a `ShapeList`
+    (`list` subclass where `isinstance(..., Shape)`, `hasattr(..., 'volume')`, and
+    `hasattr(..., 'bounding_box')` are all `False`) when overlap splits into >=2 regions.
+    """
     if shape is None:
-        return 0.0
-    sols = shape.solids()
+        return []
+    if isinstance(shape, (list, tuple)):
+        out: list[Solid] = []
+        for item in shape:
+            out.extend(_solids_of(item))
+        return out
+    if hasattr(shape, "solids"):
+        return list(shape.solids())
+    return [shape] if isinstance(shape, Solid) else []
+
+
+def _vol(shape) -> float:
+    sols = _solids_of(shape)
     return sum(s.volume for s in sols) if sols else 0.0
 
 
@@ -57,11 +76,12 @@ def clash(a, b, detail: bool = False):
     """
     _need(a is not None and b is not None, "clash needs two shapes")
     ov = a & b
-    total = _vol(ov)
+    ov_sols = _solids_of(ov)
+    total = sum(s.volume for s in ov_sols) if ov_sols else 0.0
     if not detail:
         return total
     lumps = []
-    for s in sorted((ov.solids() if ov else []), key=lambda s: -s.volume):
+    for s in sorted(ov_sols, key=lambda s: -s.volume):
         bb = s.bounding_box()
         lumps.append({
             "vol": round(s.volume, 1),
@@ -112,11 +132,12 @@ def wall_at(body, z, thickness=0.4):
     themselves in the wall.
     """
     _need(body is not None, "wall_at needs a body")
-    sl = body & (Pos(0, 0, float(z)) * Box(1000, 1000, thickness))
-    _need(_vol(sl) > 0, f"wall_at: no material at z={z}")
-    bb = sl.bounding_box()
-    return {"half_width": round(bb.max.X, 2), "front_y": round(bb.max.Y, 2),
-            "back_y": round(bb.min.Y, 2)}
+    sl_sols = _solids_of(body & (Pos(0, 0, float(z)) * Box(1000, 1000, thickness)))
+    _need(bool(sl_sols) and sum(s.volume for s in sl_sols) > 0, f"wall_at: no material at z={z}")
+    bbs = [s.bounding_box() for s in sl_sols]
+    return {"half_width": round(max(b.max.X for b in bbs), 2),
+            "front_y": round(max(b.max.Y for b in bbs), 2),
+            "back_y": round(min(b.min.Y for b in bbs), 2)}
 
 
 def solids(part, name=""):
@@ -126,7 +147,7 @@ def solids(part, name=""):
     or print as unsupported islands; this is the check that catches a boss
     floating in the cavity or a plug ring that never touched its parent.
     """
-    sols = part.solids()
+    sols = _solids_of(part)
     frag = []
     for s in sorted(sols, key=lambda s: -s.volume)[1:]:
         bb = s.bounding_box()
@@ -134,8 +155,9 @@ def solids(part, name=""):
                      "x": (round(bb.min.X, 1), round(bb.max.X, 1)),
                      "y": (round(bb.min.Y, 1), round(bb.max.Y, 1)),
                      "z": (round(bb.min.Z, 1), round(bb.max.Z, 1))})
+    valid = bool(getattr(part, "is_valid", all(s.is_valid for s in sols)))
     return {"name": name, "count": len(sols), "single": len(sols) == 1,
-            "valid": part.is_valid, "fragments": frag}
+            "valid": valid, "fragments": frag}
 
 
 def outside(part, envelope_body, tol: float = 0.05):
@@ -146,9 +168,10 @@ def outside(part, envelope_body, tol: float = 0.05):
     """
     _need(envelope_body is not None, "outside needs the outer body")
     out = part - envelope_body
-    v = _vol(out)
+    out_sols = _solids_of(out)
+    v = sum(s.volume for s in out_sols) if out_sols else 0.0
     lumps = []
-    for lump in sorted((out.solids() if out else []), key=lambda x: -x.volume)[:6]:
+    for lump in sorted(out_sols, key=lambda x: -x.volume)[:6]:
         bb = lump.bounding_box()
         lumps.append({"vol": round(lump.volume, 1),
                       "x": (round(bb.min.X, 1), round(bb.max.X, 1)),
@@ -168,11 +191,13 @@ def sag(body, z, x_half, thickness=0.4):
     than trusting the section formula.
     """
     sl = body & (Pos(0, 0, float(z)) * Box(1000, 1000, thickness))
-    _need(_vol(sl) > 0, f"sag: no material at z={z}")
-    y_mid = sl.bounding_box().max.Y
-    edge = sl & (Pos(float(x_half), 0, float(z)) * Box(0.4, 1000, thickness))
-    _need(_vol(edge) > 0, f"sag: face does not reach x={x_half} at z={z}")
-    return round(y_mid - edge.bounding_box().max.Y, 2)
+    sl_sols = _solids_of(sl)
+    _need(bool(sl_sols) and sum(s.volume for s in sl_sols) > 0, f"sag: no material at z={z}")
+    y_mid = max(s.bounding_box().max.Y for s in sl_sols)
+    edge_box = Pos(float(x_half), 0, float(z)) * Box(0.4, 1000, thickness)
+    edge_sols = [e for s in sl_sols for e in _solids_of(s & edge_box)]
+    _need(bool(edge_sols) and sum(s.volume for s in edge_sols) > 0, f"sag: face does not reach x={x_half} at z={z}")
+    return round(y_mid - max(s.bounding_box().max.Y for s in edge_sols), 2)
 
 
 def plug_sweep(
@@ -240,7 +265,7 @@ def plug_sweep(
 
 def _translate_solids(shape, delta: tuple[float, float, float]) -> list[Solid]:
     """Translate each solid leaf individually to avoid build123d Compound transform pitfalls."""
-    sols = shape.solids() if hasattr(shape, "solids") else [shape]
+    sols = _solids_of(shape)
     _need(bool(sols), "slide_path: shape has no solids")
     loc = Pos(*delta)
     return [loc * s for s in sols]
@@ -256,7 +281,7 @@ def slide_path(shell, unit, axis: str, stations, tol: float = 1.0):
     st_list = [float(s) for s in stations]
     _need(bool(st_list), "slide_path: stations must be non-empty")
 
-    shell_sols = shell.solids() if hasattr(shell, "solids") else [shell]
+    shell_sols = _solids_of(shell)
     _need(bool(shell_sols), "slide_path: shell has no solids")
 
     ax = axis.lower()
@@ -298,9 +323,9 @@ def assert_healthy(part, min_vol: float, max_vol: float, name: str = "part", req
     """Guard against degenerate boolean remnants before running clash/fit checks (pcb-enclosure-fit §6.6)."""
     _need(part is not None, f"assert_healthy({name}): part is None")
     _need(min_vol > 0 and max_vol >= min_vol, f"assert_healthy({name}): invalid volume bounds [{min_vol}, {max_vol}]")
-    sols = part.solids() if hasattr(part, "solids") else [part]
+    sols = _solids_of(part)
     vol = sum(s.volume for s in sols) if sols else 0.0
-    valid = bool(getattr(part, "is_valid", True))
+    valid = bool(getattr(part, "is_valid", bool(sols) and all(s.is_valid for s in sols)))
     _need(valid, f"assert_healthy({name}): shape is not valid")
     _need(min_vol <= vol <= max_vol, f"assert_healthy({name}): volume {vol:.2f} mm^3 outside [{min_vol}, {max_vol}]")
     if require_single:
@@ -383,10 +408,11 @@ def under_board_top_z(
 
     max_z = None
     for p in parts_list:
-        ov = col & p
-        if _vol(ov) > 0:
-            top = ov.bounding_box().max.Z
-            max_z = top if max_z is None else max(max_z, top)
+        for p_sol in _solids_of(p):
+            ov_sols = _solids_of(col & p_sol)
+            if ov_sols and sum(s.volume for s in ov_sols) > 0:
+                top = max(s.bounding_box().max.Z for s in ov_sols)
+                max_z = top if max_z is None else max(max_z, top)
     _need(max_z is not None, "under_board_top_z: column did not intersect any under_parts")
     return {"max_top_z": round(float(max_z), 3)}
 
@@ -408,8 +434,8 @@ def floating_stop_check(
     _need(0 < gap_dz < stop_dz, "floating_stop_check: requires 0 < gap_dz < stop_dz")
     f_gap = _translate_solids(floating_part, (0.0, 0.0, float(gap_dz)))
     f_stop = _translate_solids(floating_part, (0.0, 0.0, float(stop_dz)))
-    stop_sols = stop_part.solids() if hasattr(stop_part, "solids") else [stop_part]
-    pcb_sols = pcb_part.solids() if hasattr(pcb_part, "solids") else [pcb_part]
+    stop_sols = _solids_of(stop_part)
+    pcb_sols = _solids_of(pcb_part)
 
     gap_stop = sum(clash(a, b) for a in f_gap for b in stop_sols)
     gap_pcb = sum(clash(a, b) for a in f_gap for b in pcb_sols)
@@ -421,4 +447,125 @@ def floating_stop_check(
         "clear": ok,
         "at_gap_dz": {"dz": gap_dz, "stop_clash": round(gap_stop, 4), "pcb_clash": round(gap_pcb, 4)},
         "at_stop_dz": {"dz": stop_dz, "stop_clash": round(hit_stop, 4), "pcb_clash": round(hit_pcb, 4)},
+    }
+
+
+def b2b_pitch_check(
+    board_a_pts: list[tuple[float, float]],
+    board_b_pts: list[tuple[float, float]],
+    pitch_tol: float = 0.05,
+    dual_row_mirror: tuple[str, str, bool] | None = None,
+    pin_world_xy: tuple[dict[str, tuple[float, float]], dict[str, tuple[float, float]]] | None = None,
+) -> dict:
+    """Verify multi-connector rigid B2B relative center-to-center vectors & mating pin alignment (pcb-enclosure-fit §4).
+
+    Comparing pairwise relative vectors within each board is invariant to rigid assembly translation,
+    catching pitch mismatches (e.g. 28.50 vs 28.00 mm) that an author masked by shifting one board +0.20 mm.
+    - `pin_world_xy=(pins_a, pins_b)` checks actual mated world `(x, y)` coordinates per pin ID (`<= pitch_tol`),
+      catching odd/even column mirror swaps (e.g. 1.27 mm offset on 2xN headers).
+    - `dual_row_mirror=(side_a, side_b, same_pin_map)` is an optional declarative parity guard when world pin
+      coords are not yet extracted.
+    """
+    _need(len(board_a_pts) >= 2 and len(board_a_pts) == len(board_b_pts), "b2b_pitch_check: needs >=2 matched points")
+    _need(pitch_tol > 0, "b2b_pitch_check: pitch_tol must be > 0")
+    pair_deltas = []
+    for i in range(len(board_a_pts)):
+        for j in range(i + 1, len(board_a_pts)):
+            dax = float(board_a_pts[j][0]) - float(board_a_pts[i][0])
+            day = float(board_a_pts[j][1]) - float(board_a_pts[i][1])
+            dbx = float(board_b_pts[j][0]) - float(board_b_pts[i][0])
+            dby = float(board_b_pts[j][1]) - float(board_b_pts[i][1])
+            err = math.hypot(dax - dbx, day - dby)
+            pair_deltas.append({
+                "pair": (i, j),
+                "board_a_vec": (round(dax, 4), round(day, 4)),
+                "board_b_vec": (round(dbx, 4), round(dby, 4)),
+                "mismatch_mm": round(err, 4),
+                "ok": err <= pitch_tol,
+            })
+
+    mirror_risk = False
+    if dual_row_mirror is not None:
+        side_a, side_b, same_pin_map = dual_row_mirror
+        sa, sb = side_a.upper(), side_b.upper()
+        _need(sa in ("TOP", "BOTTOM") and sb in ("TOP", "BOTTOM"), "b2b_pitch_check: side must be TOP or BOTTOM")
+        if sa != sb and bool(same_pin_map):
+            mirror_risk = True
+
+    pin_mismatches = []
+    if pin_world_xy is not None:
+        pins_a, pins_b = pin_world_xy
+        common_pins = sorted(set(pins_a.keys()) & set(pins_b.keys()))
+        _need(bool(common_pins), "b2b_pitch_check: pin_world_xy has no common pin IDs")
+        for pid in common_pins:
+            xa, ya = float(pins_a[pid][0]), float(pins_a[pid][1])
+            xb, yb = float(pins_b[pid][0]), float(pins_b[pid][1])
+            perr = math.hypot(xa - xb, ya - yb)
+            if perr > pitch_tol:
+                pin_mismatches.append({"pin": pid, "delta_mm": round(perr, 4)})
+        if pin_mismatches:
+            mirror_risk = True
+
+    max_err = max(p["mismatch_mm"] for p in pair_deltas)
+    return {
+        "clear": all(p["ok"] for p in pair_deltas) and not mirror_risk and not pin_mismatches,
+        "max_mismatch_mm": max_err,
+        "mirror_pin_swap_risk": mirror_risk,
+        "pin_mismatches": pin_mismatches,
+        "pairs": pair_deltas,
+    }
+
+
+def edge_io_mutex_check(
+    strap_edges: set[str] | list[str],
+    io_ports: list[dict],
+) -> dict:
+    """Ensure external plug/finger I/O ports (USB, side buttons) never share an edge with strap/cable exits."""
+    valid_edges = {"+X", "-X", "+Y", "-Y"}
+    s_edges = {e.upper() for e in strap_edges}
+    _need(bool(s_edges) and s_edges.issubset(valid_edges), "edge_io_mutex_check: strap_edges must be subset of +-X/+-Y")
+    _need(bool(io_ports), "edge_io_mutex_check: io_ports must not be empty")
+    conflicts = []
+    for port in io_ports:
+        edge = str(port.get("edge", "")).upper()
+        name = str(port.get("name", "unnamed"))
+        _need(edge in valid_edges, f"edge_io_mutex_check: invalid edge {edge!r} on {name}")
+        if edge in s_edges:
+            conflicts.append({"name": name, "edge": edge})
+    return {
+        "clear": len(conflicts) == 0,
+        "strap_edges": sorted(s_edges),
+        "conflicts": conflicts,
+    }
+
+
+def rivet_hole_fit_check(
+    hole_d: float,
+    head_d: float,
+    shaft_d: float,
+    min_annular_grip: float = 0.80,
+    max_radial_play: float = 0.35,
+) -> dict:
+    """Verify solid/tubular electrode rivet head & shaft against FPC/PCB hole diameter.
+
+    Catches rivets whose head falls straight through or barely grips the hole rim
+    (`head_d - hole_d < min_annular_grip`, e.g. 1.5 mm head vs 1.60/2.20 mm hole),
+    shaft interference (`hole_d < shaft_d`), or excessive radial slop (`hole_d - shaft_d > max_radial_play`).
+    """
+    _need(hole_d > 0 and head_d > 0 and shaft_d > 0, "rivet_hole_fit_check: diameters must be > 0")
+    _need(head_d > shaft_d, "rivet_hole_fit_check: head_d must exceed shaft_d")
+    _need(min_annular_grip > 0 and max_radial_play >= 0, "rivet_hole_fit_check: invalid thresholds")
+    grip_diam_diff = float(head_d) - float(hole_d)
+    radial_play = float(hole_d) - float(shaft_d)
+    drop_through = float(head_d) <= float(hole_d)
+    grip_ok = grip_diam_diff >= float(min_annular_grip) - 1e-6
+    shaft_ok = -1e-6 <= radial_play <= float(max_radial_play) + 1e-6
+    return {
+        "clear": (not drop_through) and grip_ok and shaft_ok,
+        "drop_through": drop_through,
+        "annular_grip_diam_mm": round(grip_diam_diff, 4),
+        "annular_rim_per_side_mm": round(grip_diam_diff / 2.0, 4),
+        "radial_play_mm": round(radial_play, 4),
+        "grip_ok": grip_ok,
+        "shaft_ok": shaft_ok,
     }
