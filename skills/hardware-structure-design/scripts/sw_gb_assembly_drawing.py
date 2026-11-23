@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """SOLIDWORKS 远程预检与国标（GB/T）机械装配工程图 `.SLDASM` + `.SLDDRW` 自动生成工具。
 
-注意状态边界：本脚本的预检门禁、动态图幅内框坐标校验与 Mock COM 宿主契约已通过正反例自测；
-生成的 `.SLDDRW` 工程图代码待远端 `SolidWorks Flexnet Server` 处于 `Running` 时执行真机首跑核验版面细节。
+状态边界（2026-11-23 真机实测验证）：
+- 已在 SOLIDWORKS 2025 (`33.5.0`) + `pywin32` 晚绑定宿主实测跑通 `.SLDPRT` + `.SLDASM` + 国标第一角全剖工程图 + 气球序号 + `180 mm` 齐边自下而上明细栏（通用生成器默认输出主/俯/全剖/轴测四视图；项目级局部放大图 `CreateDetailViewAt4` 见参考文档）。
+- 预检门禁、动态图幅内框坐标校验与正反例自测由 `--self-test` 离线守护。
 
 用法：
 1. `--self-test`：离线运行正反例门禁与 Mock SOLIDWORKS 执行测试（无需连接远端）。
@@ -144,16 +145,43 @@ def build_sw_worker_code(
     sheet_size: str = "A2",
     sw_year: int = 2025,
 ) -> str:
-    """生成供 Solidworks-MCP `execute_python` 执行的代码（动态适配图幅并含返回与内框硬断言）。"""
+    """生成供 Solidworks-MCP `execute_python` 执行的代码（采用 SOLIDWORKS 2025 真机验证的晚绑定 COM 契约）。"""
     sheet_key = sheet_size.lower()
     lay = compute_sheet_layout_m(sheet_key)
-    scale_num = 2 if sheet_key in ("a0", "a1", "a2") else 1
+    scale_num = 1
     specs_json = json.dumps(part_specs, ensure_ascii=False)
 
     return rf'''
 import json, os, pythoncom, win32com.client
 from pathlib import Path
 {com_helper_snippet()}
+
+NULL_DISP = win32com.client.VARIANT(pythoncom.VT_DISPATCH, None)
+EMPTY_VAR = win32com.client.VARIANT(pythoncom.VT_EMPTY, None)
+
+def save_doc(doc_obj, out_file: str) -> int:
+    p = Path(out_file)
+    if p.exists():
+        p.unlink()
+    # 真机实测：Extension.SaveAs 第 4 参传 None 会触发 (-2147352571, '类型不匹配。')；统一用 IModelDoc2::SaveAs3 并核验磁盘落盘
+    rc = com(doc_obj, "SaveAs3", str(p), 0, 1)
+    if not p.is_file() or p.stat().st_size == 0:
+        raise RuntimeError(f"[ERROR] SaveAs3 failed for {{out_file}} (rc={{rc}})")
+    return p.stat().st_size
+
+def force_view_scale(vw, num: float, den: float) -> None:
+    try:
+        vw.UseSheetScale = False
+    except Exception:
+        pass
+    try:
+        vw.ScaleDecimal = float(num) / float(den)
+    except Exception:
+        pass
+    try:
+        vw.ScaleRatio = win32com.client.VARIANT(pythoncom.VT_ARRAY | pythoncom.VT_R8, [float(num), float(den)])
+    except Exception:
+        pass
 
 sw_app = globals().get("sw")
 if sw_app is None:
@@ -167,7 +195,7 @@ tpl_asm = str(tpl_dir / "gb_assembly.asmdot")
 tpl_drw = str(tpl_dir / "gb_{sheet_key}.drwdot")
 tpl_bom = str(prog_files / "SOLIDWORKS Corp" / "SOLIDWORKS" / "lang" / "chinese-simplified" / "gb-bom-material.sldbomtbt")
 
-stage = Path.home() / {remote_rel_dir!r}
+stage = Path(os.environ.get("SW_STAGE_OVERRIDE", str(Path.home() / {remote_rel_dir!r})))
 specs = json.loads({specs_json!r})
 
 # 1. 导入每个 STEP 为原生 SLDPRT 并写入国标明细栏自定义属性
@@ -182,18 +210,16 @@ for sp in specs:
         raise RuntimeError(f"[ERROR] LoadFile4 failed for {{step_file}}: err={{errs.value}}")
     ext = com(pdoc, "Extension")
     cpm = com(ext, "CustomPropertyManager", "")
-    for k, v in (("代号", sp["code"]), ("PartNo", sp["code"]), ("Description", sp["cn_name"]),
-                 ("名称", sp["cn_name"]), ("Material", sp["material"]), ("材料", sp["material"]),
+    for k, v in (("代号", sp["code"]), ("图号", sp["code"]), ("PartNo", sp["code"]),
+                 ("Description", sp["cn_name"]), ("名称", sp["cn_name"]),
+                 ("Material", sp["material"]), ("材料", sp["material"]),
                  ("备注", sp.get("remark", ""))):
         com(cpm, "Add3", k, 30, v, 2)
-    s_err = win32com.client.VARIANT(pythoncom.VT_BYREF | pythoncom.VT_I4, 0)
-    s_warn = win32com.client.VARIANT(pythoncom.VT_BYREF | pythoncom.VT_I4, 0)
-    if not com(ext, "SaveAs", prt_file, 0, 1, None, s_err, s_warn):
-        raise RuntimeError(f"[ERROR] SaveAs SLDPRT failed: {{prt_file}} err={{s_err.value}}")
+    save_doc(pdoc, prt_file)
     com(sw_app, "CloseDoc", str(com(pdoc, "GetTitle")))
     prt_paths.append((prt_file, sp))
 
-# 2. 基于 gb_assembly.asmdot 创建装配体，用 comp.Select4 选中固定并断言 IsFixed
+# 2. 基于 gb_assembly.asmdot 创建装配体，用 VT_DISPATCH 空指针调 comp.Select4 选中固定并断言 IsFixed
 asm_doc = com(sw_app, "NewDocument", tpl_asm, 0, 0, 0)
 if asm_doc is None:
     raise RuntimeError("[ERROR] Failed to create assembly from " + tpl_asm)
@@ -210,7 +236,7 @@ for prt_file, sp in prt_paths:
     if comp is None:
         raise RuntimeError(f"[ERROR] AddComponent5 returned None for {{prt_file}}")
     comp.Transform2 = com(math_util, "CreateTransform", identity_arr)
-    if not com(comp, "Select4", False, None, False):
+    if not com(comp, "Select4", False, NULL_DISP, False):
         raise RuntimeError(f"[ERROR] comp.Select4 failed for {{com(comp, 'Name2')}}")
     com(asm_doc, "FixComponent")
     com(asm_doc, "ClearSelection2", True)
@@ -219,12 +245,9 @@ for prt_file, sp in prt_paths:
 
 com(asm_doc, "EditRebuild3")
 asm_path = str(stage / "{assy_name}.SLDASM")
-s_err = win32com.client.VARIANT(pythoncom.VT_BYREF | pythoncom.VT_I4, 0)
-s_warn = win32com.client.VARIANT(pythoncom.VT_BYREF | pythoncom.VT_I4, 0)
-if not com(com(asm_doc, "Extension"), "SaveAs", asm_path, 0, 1, None, s_err, s_warn):
-    raise RuntimeError(f"[ERROR] SaveAs SLDASM failed: err={{s_err.value}}")
+save_doc(asm_doc, asm_path)
 
-# 3. 基于 gb_{sheet_key}.drwdot 创建国标第一角工程图（主视图画竖剖切线向右投影同排 A-A 全剖）
+# 3. 基于 gb_{sheet_key}.drwdot 创建国标第一角工程图
 drw = com(sw_app, "NewDocument", tpl_drw, 12, {lay['w_m']}, {lay['h_m']})
 if drw is None:
     raise RuntimeError("[ERROR] Failed to create drawing from " + tpl_drw)
@@ -239,35 +262,41 @@ v_top = com(drw, "CreateDrawViewFromModelView3", asm_path, "*上视", {lay['top_
 v_iso = com(drw, "CreateDrawViewFromModelView3", asm_path, "*等轴测", {lay['iso_x']}, {lay['iso_y']}, 0.0)
 if v_front is None or v_top is None or v_iso is None:
     raise RuntimeError("[ERROR] Failed to create standard drawing views")
+force_view_scale(v_iso, 4.0, 5.0)
+com(v_iso, "SetDisplayMode3", False, 2, False, True)
 
-# 在主视图中心画竖直剖切线，向右水平对齐生成 A-A 全剖左视图
+# 在主视图中心画竖直剖切线，向右水平对齐生成 A-A 全剖左视图（第 6 参传 VT_EMPTY）
 com(drw, "ActivateView", com(v_front, "GetName2"))
 sk_seg = com(com(drw, "SketchManager"), "CreateLine", 0.0, -0.030, 0.0, 0.0, 0.030, 0.0)
-if sk_seg is None or not com(sk_seg, "Select4", False, None):
+if sk_seg is None or not com(sk_seg, "Select4", False, NULL_DISP):
     raise RuntimeError("[ERROR] Failed to create/select section cut line")
-v_sec = com(drw, "CreateSectionViewAt5", {lay['sec_x']}, {lay['sec_y']}, 0.0, "A", 0, None, 0.0)
+v_sec = com(drw, "CreateSectionViewAt5", {lay['sec_x']}, {lay['sec_y']}, 0.0, "A", 0, EMPTY_VAR, 0.0)
 if v_sec is None:
     raise RuntimeError("[ERROR] CreateSectionViewAt5 returned None")
 
+# 显式清空选择并按 DRAWINGVIEW 选中目标剖视图，防止气球误挂到最后创建的 v_iso 上
+com(drw, "ClearSelection2", True)
+com(com(drw, "Extension"), "SelectByID2", com(v_sec, "GetName2"), "DRAWINGVIEW", 0.0, 0.0, 0.0, False, 0, NULL_DISP, 0)
 com(drw, "ActivateView", com(v_sec, "GetName2"))
 ab_opts = com(drw, "CreateAutoBalloonOptions")
-ab_opts.Layout = 2
+ab_opts.Layout = 3  # swDetailingBalloonLayout_Top 水平队列
 ab_opts.IgnoreMultiple = True
 balloons = com(drw, "AutoBalloon5", ab_opts)
 if balloons is None:
     raise RuntimeError("[ERROR] AutoBalloon5 returned None")
 
-bom_ann = com(v_front, "InsertBomTable4", False, {lay['bom_x']}, {lay['bom_y']}, 4, 1, "", tpl_bom, False, 0, False)
+bom_ann = com(v_sec, "InsertBomTable4", False, {lay['bom_x']}, {lay['bom_y']}, 4, 1, "", tpl_bom, False, 0, False)
 if bom_ann is None:
     raise RuntimeError("[ERROR] InsertBomTable4 returned None")
+# 国标明细栏 8 列总宽精确锁为 180.0 mm（与 GB/T 10609.1 标题栏左边框严丝合缝共线）
+for ci, cw in enumerate([0.010, 0.032, 0.042, 0.010, 0.034, 0.014, 0.014, 0.024]):
+    com(bom_ann, "SetColumnWidth", ci, cw, 0)
 
 com(drw, "EditRebuild3")
 drw_path = str(stage / "{assy_name}_GB_{sheet_size.upper()}.SLDDRW")
 pdf_path = str(stage / "{assy_name}_GB_{sheet_size.upper()}.pdf")
-if not com(com(drw, "Extension"), "SaveAs", drw_path, 0, 1, None, s_err, s_warn):
-    raise RuntimeError(f"[ERROR] SaveAs SLDDRW failed: err={{s_err.value}}")
-if not com(com(drw, "Extension"), "SaveAs", pdf_path, 0, 1, None, s_err, s_warn):
-    raise RuntimeError(f"[ERROR] SaveAs PDF failed: err={{s_err.value}}")
+save_doc(drw, drw_path)
+save_doc(drw, pdf_path)
 print(json.dumps({{"ok": True, "asm": asm_path, "drw": drw_path, "pdf": pdf_path, "bom_anchor_m": [{lay['bom_x']}, {lay['bom_y']}]}}, ensure_ascii=False))
 '''
 
@@ -313,10 +342,17 @@ def self_test() -> None:
     else:
         raise AssertionError("Failed to reject out-of-frame iso_x=0.495 on A3")
 
-    # 4. Mock SOLIDWORKS 全流程执行（含宿主侧内框越界断言 + 4 组必败反例）
+    # 4. Mock SOLIDWORKS 全流程执行（含真机晚绑定契约校验：SaveAs3 落盘、VT_DISPATCH 空指针、DRAWINGVIEW 显式选中、180mm 齐边列宽 + 必败反例）
+    import os
+    import tempfile
+
     fake_pycom = types.ModuleType("pythoncom")
     fake_pycom.VT_BYREF = 0x4000
     fake_pycom.VT_I4 = 3
+    fake_pycom.VT_DISPATCH = 9
+    fake_pycom.VT_EMPTY = 0
+    fake_pycom.VT_ARRAY = 0x2000
+    fake_pycom.VT_R8 = 5
     fake_pycom.CoInitialize = lambda: None
 
     fake_w32 = types.ModuleType("win32com")
@@ -330,7 +366,7 @@ def self_test() -> None:
     fake_w32_client.VARIANT = FakeVariant
     fake_w32.client = fake_w32_client
 
-    def make_mock_sw(props_override=None, fix_works: bool = True, sec_ok: bool = True):
+    def make_mock_sw(props_override=None, fix_works: bool = True, sec_ok: bool = True, save_writes_disk: bool = True):
         calls_log: list = []
         doc_size = {"w": 0.594, "h": 0.420}
 
@@ -339,12 +375,26 @@ def self_test() -> None:
             def Add3(self, k, t, v, opt):
                 return 0
 
+        class MockBom:
+            _oleobj_ = object()
+            def __init__(self):
+                self.widths = {}
+            def SetColumnWidth(self, ci, cw, flags):
+                self.widths[ci] = cw
+                calls_log.append(("col_w", ci, cw))
+                return True
+
         class MockExt:
             _oleobj_ = object()
             def CustomPropertyManager(self, cfg):
                 return MockCpm()
             def SaveAs(self, path, ver, opts, exp, err, warn):
-                calls_log.append(("save", path))
+                if exp is None:
+                    raise RuntimeError("(-2147352571, '类型不匹配。', None, 4)")
+                return True
+            def SelectByID2(self, name, sel_type, x, y, z, append, mark, callout, sel_opt):
+                assert isinstance(callout, FakeVariant) and callout.vt == fake_pycom.VT_DISPATCH
+                calls_log.append(("select_id", name, sel_type))
                 return True
 
         class MockComp:
@@ -353,19 +403,25 @@ def self_test() -> None:
             Transform2 = None
             _fixed = 0
             def Select4(self, append, data, popup):
+                assert isinstance(data, FakeVariant) and data.vt == fake_pycom.VT_DISPATCH
                 return True
             def IsFixed(self):
                 return self._fixed
 
         class MockView:
             _oleobj_ = object()
+            UseSheetScale = True
+            ScaleDecimal = 1.0
+            ScaleRatio = None
             def __init__(self, nm):
                 self._nm = nm
             def GetName2(self):
                 return self._nm
+            def SetDisplayMode3(self, *a):
+                return True
             def InsertBomTable4(self, use_anchor, x, y, anchor, btype, cfg, tpl, hidden, ind, follow):
                 calls_log.append(("bom", use_anchor, x, y, anchor, tpl))
-                return object()
+                return MockBom()
 
         class MockSheet:
             _oleobj_ = object()
@@ -378,7 +434,8 @@ def self_test() -> None:
 
         class MockSeg:
             _oleobj_ = object()
-            def Select4(self, append, mark):
+            def Select4(self, append, data):
+                assert isinstance(data, FakeVariant) and data.vt == fake_pycom.VT_DISPATCH
                 return True
 
         class MockSkMgr:
@@ -395,6 +452,13 @@ def self_test() -> None:
                 self._last_comp = None
             def GetTitle(self):
                 return self._title
+            def SaveAs3(self, path, ver, opts):
+                calls_log.append(("save3", path))
+                if save_writes_disk:
+                    p = Path(path)
+                    p.parent.mkdir(parents=True, exist_ok=True)
+                    p.write_bytes(b"SW2025_MOCK")
+                return 0
             def AddComponent5(self, *a):
                 self._last_comp = MockComp()
                 return self._last_comp
@@ -402,7 +466,7 @@ def self_test() -> None:
                 if fix_works and self._last_comp is not None:
                     self._last_comp._fixed = 1
             def ClearSelection2(self, all_flag):
-                pass
+                calls_log.append(("clear_sel", bool(all_flag)))
             def EditRebuild3(self):
                 return True
             def GetCurrentSheet(self):
@@ -415,14 +479,17 @@ def self_test() -> None:
                 calls_log.append(("view", mv, x, y))
                 return MockView(mv)
             def ActivateView(self, nm):
+                calls_log.append(("activate_view", nm))
                 return True
-            def CreateSectionViewAt5(self, x, y, z, *a):
+            def CreateSectionViewAt5(self, x, y, z, label, opts, excl, depth):
                 self._assert_inside(x, y)
+                assert isinstance(excl, FakeVariant) and excl.vt == fake_pycom.VT_EMPTY
                 calls_log.append(("section", x, y))
                 return MockView("SectionA") if sec_ok else None
             def CreateAutoBalloonOptions(self):
                 return types.SimpleNamespace(Layout=0, IgnoreMultiple=False)
             def AutoBalloon5(self, opts):
+                calls_log.append(("autoballoon", opts.Layout))
                 return [object()]
 
         class MockMath:
@@ -466,55 +533,74 @@ def self_test() -> None:
     )
 
     old_mods = {k: sys.modules.get(k) for k in ("pythoncom", "win32com", "win32com.client")}
+    old_stage = os.environ.get("SW_STAGE_OVERRIDE")
     sys.modules["pythoncom"] = fake_pycom
     sys.modules["win32com"] = fake_w32
     sys.modules["win32com.client"] = fake_w32_client
     try:
-        sw_ok, log_a2 = make_mock_sw()
-        exec(code_a2, {"sw": sw_ok})
-        bom_a2 = [c for c in log_a2 if c[0] == "bom"][0]
-        assert bom_a2[2] == 0.584 and bom_a2[3] == 0.066
+        with tempfile.TemporaryDirectory() as tmp_stage:
+            os.environ["SW_STAGE_OVERRIDE"] = tmp_stage
+            sw_ok, log_a2 = make_mock_sw()
+            exec(code_a2, {"sw": sw_ok})
+            bom_a2 = [c for c in log_a2 if c[0] == "bom"][0]
+            assert bom_a2[2] == 0.584 and bom_a2[3] == 0.066
+            col_sum = round(sum(c[2] for c in log_a2 if c[0] == "col_w"), 4)
+            assert col_sum == 0.180, f"Expected 180mm BOM width, got {col_sum}"
+            assert ("select_id", "SectionA", "DRAWINGVIEW") in log_a2
 
-        sw_ok3, log_a3 = make_mock_sw()
-        exec(code_a3, {"sw": sw_ok3})
-        bom_a3 = [c for c in log_a3 if c[0] == "bom"][0]
-        assert bom_a3[2] == 0.415 and bom_a3[3] == 0.061
+            sw_ok3, log_a3 = make_mock_sw()
+            exec(code_a3, {"sw": sw_ok3})
+            bom_a3 = [c for c in log_a3 if c[0] == "bom"][0]
+            assert bom_a3[2] == 0.415 and bom_a3[3] == 0.061
 
-        # 必败 1：第三角模板拦截
-        for bad_props in ([12.0, 12.0, 1.0, 1.0, 0.0, 0.594, 0.420], [12.0, 12.0]):
-            sw_bad_p, _ = make_mock_sw(props_override=bad_props)
+            # 必败 1：第三角模板拦截
+            for bad_props in ([12.0, 12.0, 1.0, 1.0, 0.0, 0.594, 0.420], [12.0, 12.0]):
+                sw_bad_p, _ = make_mock_sw(props_override=bad_props)
+                try:
+                    exec(code_a2, {"sw": sw_bad_p})
+                except RuntimeError as e:
+                    assert "First-Angle" in str(e)
+                else:
+                    raise AssertionError(f"Failed to reject bad sheet props: {bad_props}")
+
+            # 必败 2：FixComponent 未生效拦截
+            sw_bad_fix, _ = make_mock_sw(fix_works=False)
             try:
-                exec(code_a2, {"sw": sw_bad_p})
+                exec(code_a2, {"sw": sw_bad_fix})
             except RuntimeError as e:
-                assert "First-Angle" in str(e)
+                assert "FixComponent" in str(e)
             else:
-                raise AssertionError(f"Failed to reject bad sheet props: {bad_props}")
+                raise AssertionError("Failed to catch unfixed component")
 
-        # 必败 2：FixComponent 未生效拦截
-        sw_bad_fix, _ = make_mock_sw(fix_works=False)
-        try:
-            exec(code_a2, {"sw": sw_bad_fix})
-        except RuntimeError as e:
-            assert "FixComponent" in str(e)
-        else:
-            raise AssertionError("Failed to catch unfixed component")
+            # 必败 3：CreateSectionViewAt5 失败拦截
+            sw_bad_sec, _ = make_mock_sw(sec_ok=False)
+            try:
+                exec(code_a2, {"sw": sw_bad_sec})
+            except RuntimeError as e:
+                assert "CreateSectionViewAt5" in str(e)
+            else:
+                raise AssertionError("Failed to catch failed section view")
 
-        # 必败 3：CreateSectionViewAt5 失败拦截
-        sw_bad_sec, _ = make_mock_sw(sec_ok=False)
-        try:
-            exec(code_a2, {"sw": sw_bad_sec})
-        except RuntimeError as e:
-            assert "CreateSectionViewAt5" in str(e)
-        else:
-            raise AssertionError("Failed to catch failed section view")
+            # 必败 4：SaveAs3 未落盘（0 字节/未生成）拦截
+            sw_bad_save, _ = make_mock_sw(save_writes_disk=False)
+            try:
+                exec(code_a2, {"sw": sw_bad_save})
+            except RuntimeError as e:
+                assert "SaveAs3 failed" in str(e)
+            else:
+                raise AssertionError("Failed to catch empty/missing SaveAs3 output")
     finally:
+        if old_stage is None:
+            os.environ.pop("SW_STAGE_OVERRIDE", None)
+        else:
+            os.environ["SW_STAGE_OVERRIDE"] = old_stage
         for k, v in old_mods.items():
             if v is None:
                 sys.modules.pop(k, None)
             else:
                 sys.modules[k] = v
 
-    print("PASS: sw_gb_assembly_drawing --self-test (com(_oleobj_), 5 preflight, A2/A3/A4 inner-frame bounds + 4 negative gates)")
+    print("PASS: sw_gb_assembly_drawing --self-test (SaveAs3, VT_DISPATCH/VT_EMPTY, DRAWINGVIEW select, 180mm BOM + 5 negative gates)")
 
 
 def main() -> None:

@@ -52,7 +52,7 @@
 | 场景 | 推荐路线与脚本 | 验证状态 |
 | :--- | :--- | :--- |
 | 从现有 `.step` 套件快速出标准国标装配图矢量 PDF，或远端桌面不可用 | **路线 B（首选快路）：本机无头 FreeCAD `TechDraw.projectEx` + 布尔薄片全剖（`scripts/freecad_gb_assembly_drawing.py`）** | **已实测通过**（通用脚本 3 件 STEP 出 A3 约 `1.4s`，同源引擎 936 实体出 A2 约 `11s`，均经截图目检） |
-| 需要 `.SLDPRT/.SLDASM/.SLDDRW` 原生特征树、配合关系与联动明细栏 | **路线 A：远端桌面 SOLIDWORKS + `scripts/sw_gb_assembly_drawing.py`** | **已实现并通过离线 Mock 自测，待远端许可服务在线时做真机首跑核验** |
+| 需要 `.SLDPRT/.SLDASM/.SLDDRW` 原生特征树、配合关系与联动明细栏 | **路线 A：远端桌面 SOLIDWORKS + `scripts/sw_gb_assembly_drawing.py`** | **已实测通过**（SOLIDWORKS 2025 `33.5.0` 真机跑通 12 件 `.SLDPRT` + `.SLDASM` + `gb_a2` 第一角全剖 + 12 气球 + `180 mm` 齐边自下而上明细栏 + 异地目录双文档重开零丢引用；局部放大图 `CreateDetailViewAt4` 与 `GetOutline` 夹紧已在真机验证，通用脚本默认输出主/俯/全剖/轴测四视图） |
 
 ### 已实测踩坑与硬护栏（四栏式）
 
@@ -71,6 +71,7 @@
   - **证据**：2026-11-23 远端 SOLIDWORKS 2025 因 `SolidWorks Flexnet Server` 处于 `Stopped` 状态，启动后静默停在 Session 1 的 `#32770` `[确定]` 对话框，两个并发会话各白等 120s 超时；加预检门禁后 `0.8s` 即精确报红拦截。
   - **置信**：高（Windows Session 0 隔离机制与实测复现）。
 
-- **情形**：在 `execute_python` 内遍历 SOLIDWORKS COM 对象（如 `GetFirstDocument`、`Extension`、`GetNext`）或选中固定装配体组件。
-  - **规则**：① 严禁裸用 `callable(val)` 判断属性/方法——`pywin32` 返回的 `CDispatch` 实现了 `__call__`（`callable(val)` 为真），统一用 `callable(val) and not hasattr(val, "_oleobj_")` 安全取值；② 选中组件改用 `comp.Select4(False, None, False)` 并断言 `IsFixed` 生效，避免 `SelectByID2` 因漏带 `@装配体名` 后缀而静默选空；③ 生成工程图后必须显式断言第一角投影标志、`CreateSectionViewAt5` 与 `InsertBomTable4` 返回非空（明细栏右下锚点 `y` 须高于 `c + 56 mm` 标题栏顶边防重叠）。
-  - **证据**：历史远端装配脚本实测 + `sw_gb_assembly_drawing.py --self-test` 模拟宿主正反例测试通过（真机 `.SLDDRW` 版面细调仍待远端许可服务恢复后首跑确认，置信：中）。
+- **情形**：在 `execute_python`（`pywin32` 晚绑定动态 `CDispatch`）内调用 SOLIDWORKS COM 接口保存文件、传空指针参数、改工程图单视图比例或对指定剖视图排布自动气球序号。
+  - **规则**：① 严禁裸用 `callable(val)` 判断属性/方法——`CDispatch` 实现了 `__call__`，统一用 `callable(val) and not hasattr(val, "_oleobj_")` 安全取值；② 保存文档一律调 `IModelDoc2::SaveAs3(path, 0, 1)` 并核对磁盘文件非空，**禁止**向 `Extension.SaveAs` 第 4 参 `ExportData` 直接传 Python `None`（晚绑定按 `VT_EMPTY` 封送会当场抛 `(-2147352571, '类型不匹配。', None, 4)`）；③ 凡期待 `IDispatch*` 空指针的参数（如 `comp.Select4`、`sk_seg.Select4`、`SelectByID2`）统一传 `VARIANT(pythoncom.VT_DISPATCH, None)`，`CreateSectionViewAt5` 第 6 参 `ExcludedComponents` 传 `VARIANT(pythoncom.VT_EMPTY, None)`，装配体包围盒调 `IAssemblyDoc::GetBox(0)`（不在 `Extension` 上）；④ 单视图改比例须在 `UseSheetScale = False` 后传 `VARIANT(pythoncom.VT_ARRAY | pythoncom.VT_R8, [num, den])` 赋给 `ScaleRatio`（裸传 Python `list` 会被静默忽略），等轴测视图用 `SetDisplayMode3(False, 2, False, True)` 切为消除隐藏线避免高密器件黑团，并用 `GetOutline()` 夹紧在图框安全区内；⑤ 调 `AutoBalloon5` 前必须先 `ClearSelection2(True)` 再 `Extension.SelectByID2(view_name, "DRAWINGVIEW", ...)` 显式选中目标剖视图（仅调 `ActivateView` 不会改掉上一新建视图的选中态，气球会误挂到最后新建的等轴测图上）；⑥ 局部放大图调 12 参 `CreateDetailViewAt4`（草图圆/剖切线在激活视图内的 `(0,0)` 为该视图二维包络中心而非三维原点）；`gb-bom-material.sldbomtbt` 插入后将 8 列宽显式设为总和 `0.180 m`，使明细栏左框线与 `180 mm` 国标标题栏严丝合缝共线。
+  - **证据**：2026-11-23 在 SOLIDWORKS 2025（`33.5.0`）真机从 12 个 STEP 生成原生 `.SLDPRT`、`.SLDASM` 与 `gb_a2` 总装配图时逐项实测踩中并修复，成图经 200 DPI 视觉复核且异地洁净目录重开 `.SLDASM`/`.SLDDRW` 12 组件 0 报错。
+  - **置信**：高（SOLIDWORKS 2025 `pywin32` 晚绑定真机实测验证）。
