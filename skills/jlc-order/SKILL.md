@@ -1,6 +1,6 @@
 ---
 name: jlc-order
-version: 0.1.4
+version: 0.1.5
 description: >-
   在嘉立创（jlc.com / jlc-smt.com）下 PCB 打样单 + 经济型 SMT 贴片单的实操流程：先算价、出制造包、
   网页下单、随单传 Gerber、进 SMT 传 BOM/坐标做匹配，停在付款前。来源：MAKO 手表载板 v0.16 第一次真实下单
@@ -103,6 +103,7 @@ description: >-
 只想换同工艺的文件：订单详情「更多操作 → ①重新上传文件下单」最快，参数照搬、系统出新单号、旧单自动取消（2026-09-26 Y13→Y14 实测）。工艺也要改时才走取消重下：`https://member.jlc.com/` → 左栏"PCB / FPC 订单" → "PCB / FPC订单"（跳到 `jlc.com/newOrder/#/pcb/pcbOrderList`）→ 该行"取消" → 弹"请确认是否取消订单？"点确定（有时要点两次）。然后从第 3 步重来；新单会拿到新的 `produceOrderAccessId`，SMT 那边重新选单、重传 BOM/坐标（历史匹配不会自动带过去）。2026-09-16 v16→v18 实测：全程 6 分钟。
 - **多会话并行时，换单动手前必先查 `HANDOFF` 与实时订单列表**：确认别的会话是否刚完成换单并已过人工审图进「待付款」，严禁不查现状把已过审的新单误当旧单取消重排（白白多等一轮 20–60 分钟人工审核）。
 - **PCB/FPC 与 SMT 为「`(合并合同)`」时，引导用户从「SMT 订单列表」勾选合并支付**：在 SMT 列表勾选合并支付会自动把关联的裸板单（如 `Y49`/`Y50`）一并结清；若去 PCB 订单列表单独勾选裸板支付，会漏付 SMT 贴片单。
+- **未付款单换改版 Gerber 分清三个相似入口，且压缩包名在 `.zip` 前禁带额外英文句点。** 情形：对未付款的 PCB/FPC 单替换改版 Gerber，列表组件同时存在 `orderNewlyFileInitUnion`（`①重新上传文件下单 → submitOrderNewFile`）、`directRefundOrReplaceFileToNew`（`submitOrderReplaceFile`）与 `addSameThchnicsOrder`（`下相同工艺订单`）。规则：① 未付款单同工艺换文件一律走 **`orderNewlyFileInitUnion`（`submitOrderNewFile`）**，服务端原子创建新单号并自动取消旧未付单，完整保留原单 `1×1` 帮拼四边工艺边备注、`先贴补强,后SMT`、`0.20 mm PI 补强` 及审图后的 `EDA文件优惠 -¥50`；② **禁调**已退款单专用的 `submitOrderReplaceFile`（未付款调必报「不存在替换文件的退款单」），也**不走** `下相同工艺订单`（明示丢弃原单备注与拼板要求）；③ 上传文件名把版本号小数点改为下划线（如 `*-R3_1-Gerber.zip`），防展示按首个句点截断。证据：2026-11-23 两款双面 5 片软板改版换单实测验证 `submitOrderReplaceFile` 拒收与 `orderNewlyFileInitUnion` 原子换单，两单服务端详情回读帮拼备注、PI 补强与 `-¥50` EDA 优惠 100% 保留。置信：高（前端方法源码与两单服务端回读互证）。
 
 ## 5. 记账
 
@@ -148,6 +149,11 @@ description: >-
 - 3.82×2.51 cm 小板双面贴，工厂自动加四周工艺边、Mark、定位孔；PCB 从试算 ¥213.67 到待付款 ¥266.49，明细未核。
 - 2 片双面 4 层实价：嘉立创 SMT ¥1183.23（元件 ¥581.37 + 加工 ¥601.86）；同配置华秋 SMT 页 ¥1481.73 且元件费另算。小批量先比固定费。
 - FPC 座开口朝工艺边时，分板前插不了排线。
+- **FPC 软板 SMT 强制标准型、上传页水合时序与 `window.opener` 匹配握手**：
+  - **情形**：为 FPC 软板下单面 SMT 单（`jlc-smt.com/order?type=smtUploadBomFile&produceOrderAccessId=...` → `smt-order-lceda` → 结算抽屉）。
+  - **规则**：① FPC 软板在平台强制锁 **标准型**（经济型置灰不可选，固定收治具费 ¥300 + 工程费 ¥150 + 钢网费 ¥50）；② 上传页首次加载约 2 秒后 Next.js `router.replace` 及 BOM/CPL 异步上传回调都会清空已选单选框，顺序固定为：**等 URL 稳定 → 先选坐标格式（`AD,99SE...`，后点会清掉已传坐标）→ 传齐 BOM 与 CPL 并等双文件名回显 → 最后点选 `只贴顶层 / 标准型 / 确认DFM(需要¥3→不允许系统自动确认) / 确认钢网(不需要)` → 核右栏「信息详情」已显示「只贴顶层 / 标准型」再点下一步**；③ 匹配页初始 `bomResultSource=wait` 依赖 **`window.opener` `postMessage` 握手**写缓存并自跳 `cache`，禁止脱离 `opener` 直开 `wait` URL（会白屏），须放行原生 `window.open`；④ 结算抽屉极性三选一对应 `<input type="radio" name="treatment-radio" value="4">`（收费 10 元），勾选后须等底部总价实时 `+¥10` 再提交，并在 `member.jlc.com/center/smt/home/order/smt_list/`「订单详情」回读确认 **`极性费 ¥10`、`确认DFM服务费 ¥3`、`订单备注：人工确认极性`** 与 **`原始贴片图 1–4`** 均已落库。
+  - **证据**：2026-11-23 两款 5 片顶层 FPC 标准型贴片实测：传文件途中点单选框导致右栏「产品类型」被回调清空、脱离 `opener` 开 `wait` 页两次白屏；按上述时序放行 `window.open` 并核 `+¥10` 提交后，两单系统秒审通过且详情回读 100% 命中。
+  - **置信**：高（前端 `TD()` 提交源码与两单服务端回读闭环）。
 
 ## 9. 库存、寄料与提交后的选项回读
 
