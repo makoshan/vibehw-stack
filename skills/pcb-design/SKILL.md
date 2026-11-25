@@ -1,7 +1,7 @@
 ---
 name: pcb-design
 metadata:
-  version: "0.9.3"
+  version: "0.9.4"
 description: 绘制、整理或评审电路原理图，以及设计或评审 PCB 时使用；覆盖保电路重画、逐脚核对、布局布线、打板文件和首板调试。
 ---
 
